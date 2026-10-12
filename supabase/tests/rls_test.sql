@@ -89,6 +89,32 @@ select pg_temp.check((select count(*) from sales) = 2, 'Ana ve todas las ventas 
 select pg_temp.check((select count(*) from members) = 2, 'Ana ve a su equipo');
 reset role;
 
+-- Stock: la venta descuenta, borrarla devuelve, y nadie toca el stock de otro negocio
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+insert into products (business_id, name, price, unit, stock) values (:'a_id', 'Maní', 100, 'u', 10) returning id as mani \gset
+insert into products (business_id, name, price, unit, stock) values (:'a_id', 'Nueces', 5000, 'kg', 2) returning id as nuez \gset
+insert into products (business_id, name, price, unit) values (:'a_id', 'Pasas', 300, 'u') returning id as pasas \gset
+select set_config('my.mani', :'mani', false);
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000c');
+insert into sales (business_id, shop_id, payment, amount, items) values (:'a_id', :'centro', 'Efectivo', 1500, jsonb_build_array(
+  jsonb_build_object('id', :'mani', 'name', 'Maní', 'qty', 3, 'unit', 'u', 'price', 100),
+  jsonb_build_object('id', :'nuez', 'name', 'Nueces', 'qty', 250, 'unit', 'kg', 'price', 5000),
+  jsonb_build_object('id', :'pasas', 'name', 'Pasas', 'qty', 1, 'unit', 'u', 'price', 300))) returning id as venta \gset
+select pg_temp.check((select stock from products where id = :'mani') = 7, 'La venta de la cajera descuenta 3 unidades');
+select pg_temp.check((select stock from products where id = :'nuez') = 1.75, 'Vender 250 g descuenta 0,25 kg');
+select pg_temp.check((select stock from products where id = :'pasas') is null, 'Un producto sin stock cargado sigue sin control');
+delete from sales where id = :'venta';
+select pg_temp.check((select stock from products where id = :'mani') = 10, 'Borrar la venta devuelve el stock');
+update products set stock = 999 where id = :'mani';
+select pg_temp.check((select stock from products where id = :'mani') = 10, 'La cajera no puede cambiar el stock a mano');
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
+insert into sales (business_id, shop_id, payment, amount, items)
+  select :'b_id', id, 'Efectivo', 100, jsonb_build_array(jsonb_build_object('id', current_setting('my.mani'), 'qty', 5)) from shops limit 1;
+reset role;
+select pg_temp.check((select stock from products where id = :'mani') = 10, 'Una venta de Beto no toca el stock de Ana');
+
 -- Sin sesión no se ve nada
 select set_config('request.jwt.claim.sub', '', false);
 set role anon;

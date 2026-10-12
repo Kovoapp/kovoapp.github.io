@@ -281,20 +281,31 @@ function calc() {
 }
 const lineTotal = l => l.unit === "kg" ? l.price * l.qty / 1000 : l.price * l.qty;
 function sync() { $("monto").value = cart.length ? Math.round(cart.reduce((a, l) => a + lineTotal(l), 0) * 100) / 100 : ""; calc() }
-function addProd(p) { cart.push({ name: p.name, price: num(p.price), unit: p.unit, qty: p.unit === "kg" ? 250 : 1 }); $("busq").value = ""; renderResults(); renderCart(); sync() }
+// Stock: vacío (null) = no se controla. Se guarda en unidades o en kilos.
+const hayStock = p => p && p.stock !== null && p.stock !== undefined;
+const fmtStock = p => { const n = Math.round(num(p.stock) * 1000) / 1000; return n.toLocaleString("es-AR") + (p.unit === "kg" ? " kg" : " u") };
+function addProd(p) {
+  cart.push({ id: p.id, name: p.name, price: num(p.price), unit: p.unit, qty: p.unit === "kg" ? 250 : 1 }); $("busq").value = ""; renderResults(); renderCart(); sync();
+  if (hayStock(p) && num(p.stock) <= 0) toast("Ojo: " + p.name + " figura sin stock");
+}
+// Descuenta (o devuelve) en la lista local lo mismo que descuenta la base al anotar o borrar una venta.
+function moverStock(items, sgn) {
+  (items || []).forEach(i => { const p = catalog.find(x => x.id === i.id); if (hayStock(p)) p.stock = num(p.stock) + sgn * (p.unit === "kg" ? i.qty / 1000 : i.qty) });
+  renderCatalog();
+}
 function renderResults() {
   const q = $("busq").value.trim().toLowerCase(), box = $("res"); box.innerHTML = "";
   if (!q) return;
   const m = catalog.filter(p => p.name.toLowerCase().includes(q) || (p.code && p.code.includes(q))).slice(0, 8);
   if (!m.length) { box.innerHTML = '<div class="mu" style="margin-top:6px">Sin resultados</div>'; return }
-  m.forEach(p => { const b = document.createElement("button"); b.type = "button"; b.className = "chip pick"; b.textContent = p.name + " · " + fmt(p.price) + (p.unit === "kg" ? " /kg" : ""); b.onclick = () => addProd(p); box.appendChild(b) });
+  m.forEach(p => { const b = document.createElement("button"); b.type = "button"; b.className = "chip pick"; b.textContent = p.name + " · " + fmt(p.price) + (p.unit === "kg" ? " /kg" : "") + (hayStock(p) ? (num(p.stock) > 0 ? " · quedan " + fmtStock(p) : " · sin stock") : ""); if (hayStock(p) && num(p.stock) <= 0) b.classList.add("sin-stock"); b.onclick = () => addProd(p); box.appendChild(b) });
 }
 function enterBusq() {
   const v = $("busq").value.trim(); if (!v) return;
   const p = catalog.find(x => x.code && x.code === v); if (p) return addProd(p);
   const m = catalog.filter(x => x.name.toLowerCase().includes(v.toLowerCase()));
   if (m.length === 1) addProd(m[0]);
-  else if (/^\d{6,}$/.test(v)) $("res").innerHTML = '<div class="mu" style="margin-top:6px">No hay un producto con ese código</div>';
+  else if (/^\d{6,}$/.test(v)) codigoNuevo(v);
 }
 function renderCart() {
   const box = $("cart"); box.innerHTML = "";
@@ -324,13 +335,13 @@ async function anotarVenta() {
   const may = isWholesale(local);
   if (may && !mcli) return say("msg", "Elegí un cliente de la lista.", true);
   $("enviar").disabled = true; $("imp").hidden = true;
-  const row = { business_id: biz.id, shop_id: local, day: isoF("vfecha") || hoy(), client_name: may ? mcli : "", payment: pago, amount: monto, paid_with: efectivo ? pagaV : 0, items: cart.map(l => ({ name: l.name, qty: l.qty, unit: l.unit, price: l.price })) };
+  const row = { business_id: biz.id, shop_id: local, day: isoF("vfecha") || hoy(), client_name: may ? mcli : "", payment: pago, amount: monto, paid_with: efectivo ? pagaV : 0, items: cart.map(l => ({ id: l.id, name: l.name, qty: l.qty, unit: l.unit, price: l.price })) };
   const { data, error } = await sb.from("sales").insert(row).select().single();
   $("enviar").disabled = false;
   if (error) return say("msg", errMsg(error), true);
-  say("msg", "✓ Venta anotada");
+  say("msg", "✓ Venta anotada"); moverStock(data.items, -1);
   last = data; $("imp").hidden = false;
-  ultima = { id: data.id, amount: monto, shop: shopName(local), payment: pago, at: Date.now() }; store.set("ultimaVenta", JSON.stringify(ultima)); pintaUndo();
+  ultima = { id: data.id, amount: monto, shop: shopName(local), payment: pago, at: Date.now(), items: data.items }; store.set("ultimaVenta", JSON.stringify(ultima)); pintaUndo();
   mcli = null; $("cbus").value = ""; $("cres").hidden = true; $("mdel").hidden = true;
   cart = []; renderCart(); $("monto").value = ""; $("paga").value = ""; calc();
 }
@@ -346,7 +357,7 @@ async function deshacer() {
   const { error, count } = await sb.from("sales").delete({ count: "exact" }).eq("id", ultima.id);
   if (error) return aviso(errMsg(error));
   if (count === 0) aviso("No se pudo eliminar: ya pasaron más de 15 minutos. Pedile al dueño que la borre desde Resumen.");
-  else say("msg", "Venta eliminada");
+  else { say("msg", "Venta eliminada"); moverStock(ultima.items, 1) }
   ultima = null; last = null; store.del("ultimaVenta"); pintaUndo(); $("imp").hidden = true;
 }
 
@@ -744,29 +755,94 @@ function renderCatalog() {
     const tr = document.createElement("tr");
     const c2 = td(fmt(p.price) + (p.unit === "kg" ? " /kg" : "") + " ✎", "n"); c2.style.cursor = "pointer"; c2.title = "Cambiar precio";
     c2.onclick = async () => { const v = parseFloat(await ask("Nuevo precio de " + p.name, true, p.price)); if (v > 0) upd("products", p.id, { price: v }) };
+    const cs = td((hayStock(p) ? fmtStock(p) : "—") + " ✎", "n"); cs.style.cursor = "pointer"; cs.title = "Cambiar stock";
+    if (hayStock(p) && num(p.stock) <= 0) cs.classList.add("sin-stock");
+    cs.onclick = async () => {
+      const r = await ask("Stock de " + p.name + (p.unit === "kg" ? " (en kilos)" : " (unidades)") + ". Escribí la cantidad que hay, o +10 para sumar lo que llegó. Vacío = no controlar.", "text", hayStock(p) ? String(num(p.stock)) : "");
+      if (r === null) return;
+      const t = String(r).trim().replace(",", ".");
+      if (t === "") return upd("products", p.id, { stock: null });
+      const v = parseFloat(t); if (isNaN(v)) return aviso("Escribí un número, por ejemplo 12 o +10.");
+      upd("products", p.id, { stock: /^\+/.test(t) && hayStock(p) ? num(p.stock) + v : v });
+    };
     const c3 = td(); c3.appendChild(delBtn(async () => { if (await ask("¿Borrar " + p.name + "?")) { const { error } = await sb.from("products").delete().eq("id", p.id); error ? aviso(errMsg(error)) : reloadRefs() } }));
-    tr.append(td(p.name + (p.code ? " · " + p.code : "")), c2, c3); t.appendChild(tr);
+    tr.append(td(p.name + (p.code ? " · " + p.code : "")), c2, cs, c3); t.appendChild(tr);
   });
 }
 
 // ---------------------------------------------------------------
 // Escáner de código de barras
 // ---------------------------------------------------------------
+const FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "itf", "qr_code"];
+let detectorP = null;
+// Usa el lector del navegador si existe (Chrome en Android); si no, uno propio que funciona en iPhone y computadoras.
+function getDetector() {
+  if (detectorP) return detectorP;
+  detectorP = (async () => {
+    if ("BarcodeDetector" in window) {
+      try {
+        const ok = await window.BarcodeDetector.getSupportedFormats();
+        const f = FORMATS.filter(x => ok.includes(x));
+        if (f.includes("ean_13")) return new window.BarcodeDetector({ formats: f });
+      } catch (e) { }
+    }
+    if (!window.BarcodeDetectionAPI) await new Promise((res, rej) => {
+      const sc = document.createElement("script"); sc.src = "vendor/barcode-detector/ponyfill.js"; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc);
+    });
+    const api = window.BarcodeDetectionAPI;
+    const wasm = new URL("vendor/barcode-detector/zxing_reader.wasm", location.href).href;
+    api.prepareZXingModule({ overrides: { locateFile: (path, prefix) => path.endsWith(".wasm") ? wasm : prefix + path } });
+    return new api.BarcodeDetector({ formats: FORMATS });
+  })();
+  detectorP.catch(() => { detectorP = null });
+  return detectorP;
+}
 function escanear(cb) {
-  if (!("BarcodeDetector" in window)) return aviso("Este dispositivo no permite escanear con la cámara. Usá un lector o escribí el código.");
-  const ov = document.createElement("div"); ov.style.cssText = "position:fixed;inset:0;background:#000;z-index:150;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px";
-  const v = document.createElement("video"); v.setAttribute("playsinline", ""); v.muted = true; v.style.cssText = "max-width:100%;max-height:70%";
-  const c = document.createElement("button"); c.className = "btn"; c.style.cssText = "width:auto;padding:12px 24px"; c.textContent = "Cancelar";
-  ov.append(v, c); document.body.appendChild(ov);
-  let stream, timer, done = false;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return aviso("Este navegador no deja usar la cámara. Usá un lector de mano o escribí el código.");
+  const ov = document.createElement("div"); ov.className = "scan";
+  ov.innerHTML = '<div class="scan-view"><video playsinline muted autoplay></video><div class="scan-frame"></div></div><div class="scan-msg">Abriendo la cámara…</div>';
+  const v = ov.querySelector("video"), msg = ov.querySelector(".scan-msg");
+  const c = document.createElement("button"); c.type = "button"; c.className = "btn"; c.style.cssText = "width:auto;padding:12px 28px;margin:0"; c.textContent = "Cancelar";
+  ov.appendChild(c); document.body.appendChild(ov);
+  const cv = document.createElement("canvas"), ctx = cv.getContext("2d", { willReadFrequently: true });
+  let stream, done = false, busy = false, timer;
   const stop = () => { done = true; clearInterval(timer); if (stream) stream.getTracks().forEach(t => t.stop()); ov.remove() };
   c.onclick = stop;
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(st => {
+  Promise.all([
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }),
+    getDetector()
+  ]).then(async ([st, det]) => {
     if (done) { st.getTracks().forEach(t => t.stop()); return }
-    stream = st; v.srcObject = st; v.play();
-    const det = new BarcodeDetector();
-    timer = setInterval(async () => { try { const r = await det.detect(v); if (r.length && !done) { const val = r[0].rawValue; stop(); cb(val) } } catch (e) { } }, 300);
-  }).catch(() => { stop(); aviso("No se pudo usar la cámara. Revisá el permiso del navegador.") });
+    stream = st; v.srcObject = st; try { await v.play() } catch (e) { }
+    msg.textContent = "Apuntá al código de barras";
+    timer = setInterval(async () => {
+      if (busy || done || !v.videoWidth) return;
+      busy = true;
+      try {
+        cv.width = v.videoWidth; cv.height = v.videoHeight; ctx.drawImage(v, 0, 0);
+        const r = await det.detect(cv);
+        if (r.length && !done) { const val = r[0].rawValue; if (navigator.vibrate) navigator.vibrate(80); stop(); cb(val) }
+      } catch (e) { }
+      busy = false;
+    }, 250);
+  }).catch(e => {
+    stop();
+    aviso(e && e.name === "NotAllowedError" ? "No hay permiso para usar la cámara. Activalo en la configuración del navegador para esta página."
+      : e && e.name === "NotFoundError" ? "No encontramos una cámara en este dispositivo."
+        : "No se pudo abrir el escáner. Revisá la conexión y probá de nuevo.");
+  });
+}
+// Un código que no está cargado: el dueño puede darlo de alta en el momento.
+async function codigoNuevo(code) {
+  if (!isMgr()) { $("res").innerHTML = '<div class="mu" style="margin-top:6px">No hay un producto con el código ' + code.replace(/\D/g, "") + '. Pedile al dueño que lo cargue.</div>'; return }
+  const name = await ask("El código " + code + " no está cargado. ¿Cómo se llama el producto?", "text", "");
+  if (!name || !name.trim()) return;
+  const price = parseFloat(await ask("Precio de " + name.trim() + " ($ por unidad)", true, ""));
+  if (!(price > 0)) return;
+  const { data, error } = await sb.from("products").insert({ business_id: biz.id, name: name.trim(), price, unit: "u", code }).select().single();
+  if (error) return aviso(errMsg(error));
+  catalog.push(data); catalog.sort((a, b) => a.name.localeCompare(b.name)); renderCatalog();
+  addProd(data); toast("Producto agregado");
 }
 
 // ---------------------------------------------------------------
@@ -792,7 +868,17 @@ function wireOnce() {
   $("monto").oninput = calc; $("paga").oninput = calc;
   $("enviar").onclick = anotarVenta; $("undo").onclick = deshacer; $("imp").onclick = () => { if (last) printTicket(last) };
   $("busq").oninput = renderResults; $("busq").onkeydown = e => { if (e.key === "Enter") enterBusq() };
-  if ("BarcodeDetector" in window) { $("bcam").hidden = false; $("pcam").hidden = false }
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) { $("bcam").hidden = false; $("pcam").hidden = false }
+  // Lector de mano (USB/Bluetooth): escribe muy rápido y termina con Enter. Si no hay un campo enfocado, va al buscador.
+  let burst = "", lastKey = 0;
+  document.addEventListener("keydown", e => {
+    if (tab !== "venta" || $("prodwrap").hidden || document.querySelector(".ov,.scan")) return;
+    const el = document.activeElement, typing = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
+    if (typing) return;
+    const now = Date.now(); if (now - lastKey > 80) burst = ""; lastKey = now;
+    if (/^[0-9A-Za-z]$/.test(e.key)) burst += e.key;
+    else if (e.key === "Enter" && burst.length >= 6) { e.preventDefault(); $("busq").value = burst; burst = ""; enterBusq() }
+  });
   $("bcam").onclick = () => escanear(v => { $("busq").value = v; enterBusq() });
   $("pcam").onclick = () => escanear(v => { $("pc").value = v });
   $("cbus").oninput = () => { syncCli(); listaClis(false) };
@@ -877,11 +963,11 @@ function wireOnce() {
   $("pf").oninput = renderCatalog;
   $("pp").addEventListener("wheel", () => $("pp").blur());
   $("padd").onclick = async () => {
-    const name = $("pn").value.trim(), price = parseFloat($("pp").value), code = $("pc").value.trim();
+    const name = $("pn").value.trim(), price = parseFloat($("pp").value), code = $("pc").value.trim(), st = $("ps").value.trim();
     if (!name || !(price > 0)) return say("pm2", "Escribí el nombre y el precio.", true);
-    const { error } = await sb.from("products").insert({ business_id: biz.id, name, price, unit: punit === "Kilo" ? "kg" : "u", code });
+    const { error } = await sb.from("products").insert({ business_id: biz.id, name, price, unit: punit === "Kilo" ? "kg" : "u", code, stock: st === "" ? null : parseFloat(st) });
     if (error) return say("pm2", errMsg(error), true);
-    $("pn").value = ""; $("pp").value = ""; $("pc").value = ""; say("pm2", "✓ Producto agregado"); reloadRefs();
+    $("pn").value = ""; $("pp").value = ""; $("pc").value = ""; $("ps").value = ""; say("pm2", "✓ Producto agregado"); reloadRefs();
   };
   aplicarAncho();
   // Actualización en vivo del resumen cuando otro dispositivo anota algo

@@ -38,3 +38,5 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Recorrer la app
         run: node tests/ui-smoke.mjs
+      - name: Probar el escáner con cámara simulada
+        run: node tests/scanner.mjs

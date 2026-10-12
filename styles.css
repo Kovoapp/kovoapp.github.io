@@ -87,6 +87,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .loc .big{font-size:24px}
 #res{display:flex;flex-wrap:wrap}
 .pick{flex:0 1 auto;margin:6px 6px 0 0;text-align:left}
+.sin-stock{color:var(--rd)}
+.chip.sin-stock{border-color:var(--rd)}
 .cl{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd)}
 .cn{flex:1;min-width:0;font-weight:500}
 .cq{width:76px;min-height:42px;padding:8px;font-size:16px;text-align:right}
@@ -163,3 +165,10 @@ a{color:var(--ac)}
 .list-edit .item{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)}
 .list-edit .item .name{flex:1 1 100%;display:flex;align-items:center;gap:8px;font-weight:600;min-width:0}
 .list-edit .item .chip{flex:0 0 auto;min-height:40px;font-size:14px}
+
+/* Escáner con la cámara */
+.scan{position:fixed;inset:0;background:#000;z-index:150;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:16px}
+.scan-view{position:relative;width:100%;max-width:520px;border-radius:16px;overflow:hidden;background:#111}
+.scan-view video{display:block;width:100%;max-height:65dvh;object-fit:cover}
+.scan-frame{position:absolute;left:10%;right:10%;top:32%;bottom:32%;border:3px solid #fff;border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+.scan-msg{color:#fff;font-weight:600;font-size:17px;text-align:center}

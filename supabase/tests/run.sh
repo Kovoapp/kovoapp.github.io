@@ -6,4 +6,5 @@ cd "$(dirname "$0")"
 PSQL=(psql "$PGURL" -v ON_ERROR_STOP=1 -q -t -o /dev/null)
 "${PSQL[@]}" -f auth_stub.sql
 "${PSQL[@]}" -f ../schema.sql
+"${PSQL[@]}" -f ../stock.sql  # correrlo encima no rompe nada
 "${PSQL[@]}" -f rls_test.sql

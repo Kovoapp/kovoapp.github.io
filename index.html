@@ -143,9 +143,11 @@
     <div class="row" id="pu"></div>
     <label for="pc">Código de barras <span class="opt">(opcional)</span></label>
     <div class="row" style="flex-wrap:nowrap"><input id="pc" inputmode="numeric" placeholder="Escaneá o escribí el código" autocomplete="off"><button type="button" id="pcam" class="chip camb" hidden aria-label="Escanear con la cámara">📷</button></div>
+    <label for="ps">Stock <span class="opt">(opcional: unidades, o kilos si se vende por kilo)</span></label>
+    <input id="ps" type="number" inputmode="decimal" placeholder="Vacío = no controlar">
     <button class="btn" id="padd">Agregar producto</button>
     <div class="ok" id="pm2"></div>
-    <label for="pf">Lista de productos <span class="opt">(tocá el precio para cambiarlo)</span></label>
+    <label for="pf">Lista de productos <span class="opt">(tocá el precio o el stock para cambiarlo)</span></label>
     <input id="pf" placeholder="Filtrar..." autocomplete="off">
     <div class="scroll"><table id="plist2" style="margin-top:10px"></table></div>
   </div>
