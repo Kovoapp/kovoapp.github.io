@@ -82,6 +82,9 @@ for (const [w, h, scheme] of [[390, 844, "light"], [1100, 900, "dark"]]) {
   check(true, "crea un código de invitación");
   await snap("6-ajustes");
   check(await page.isHidden("#tabs") && await page.isHidden("#balance"), "Ajustes se abre como pantalla aparte");
+  await page.fill("#pie", "Gracias por venir"); await page.click("#pieSave");
+  await page.waitForFunction(() => window.__SB__.__db.businesses[0].ticket_footer === "Gracias por venir");
+  check(await page.$eval("#pie", e => e.closest(".card").contains(document.getElementById("anchos"))), "el mensaje y el tamaño del papel están juntos en Ticket");
   await page.goBack();
   check(await page.isHidden("#cfgbox") && !(await page.isHidden("#balance")), "el botón atrás vuelve a la caja");
   await page.click("#cfg"); await page.click("#cfgBack");

@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="styles.css?v=5">
+<link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
 
@@ -110,9 +110,17 @@
     <h2 class="card-title">Negocio</h2>
     <label for="cbiz">Nombre</label>
     <input id="cbiz" autocomplete="off">
-    <label for="pie">Texto al pie del ticket</label>
-    <input id="pie" placeholder="Ej: ¡Gracias por su compra!" autocomplete="off">
     <button class="btn sm" id="cbizSave">Guardar</button>
+  </div>
+  <div class="card">
+    <h2 class="card-title">Ticket</h2>
+    <div class="mgr">
+      <label for="pie">Mensaje al pie <span class="opt">(sale en todos los tickets del negocio)</span></label>
+      <input id="pie" placeholder="Ej: ¡Gracias por su compra!" autocomplete="off">
+      <button class="btn sm" id="pieSave">Guardar mensaje</button>
+    </div>
+    <label>Tamaño del papel <span class="opt">(según la impresora de este dispositivo)</span></label>
+    <div class="row" id="anchos"></div>
   </div>
   <div class="card mgr">
     <h2 class="card-title">Locales</h2>
@@ -156,10 +164,8 @@
     <div class="scroll"><table id="plist2" style="margin-top:10px"></table></div>
   </div>
   <div class="card">
-    <h2 class="card-title">Este dispositivo</h2>
-    <label>Ancho del papel del ticket</label>
-    <div class="row" id="anchos"></div>
-    <div class="row" style="margin-top:14px;justify-content:space-between;align-items:center">
+    <h2 class="card-title">Tu cuenta</h2>
+    <div class="row" style="margin-top:8px;justify-content:space-between;align-items:center">
       <span class="mu" id="whoami"></span>
       <button type="button" class="btn sm danger-ghost" data-logout style="width:auto">Cerrar sesión</button>
     </div>
@@ -309,6 +315,6 @@
 </div>
 
 <div id="ticket"></div>
-<script type="module" src="js/app.js?v=5"></script>
+<script type="module" src="js/app.js?v=6"></script>
 </body>
 </html>
