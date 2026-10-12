@@ -281,13 +281,24 @@ function calc() {
 }
 const lineTotal = l => l.unit === "kg" ? l.price * l.qty / 1000 : l.price * l.qty;
 function sync() { $("monto").value = cart.length ? Math.round(cart.reduce((a, l) => a + lineTotal(l), 0) * 100) / 100 : ""; calc() }
-function addProd(p) { cart.push({ name: p.name, price: num(p.price), unit: p.unit, qty: p.unit === "kg" ? 250 : 1 }); $("busq").value = ""; renderResults(); renderCart(); sync() }
+// Stock: vacío (null) = no se controla. Se guarda en unidades o en kilos.
+const hayStock = p => p && p.stock !== null && p.stock !== undefined;
+const fmtStock = p => { const n = Math.round(num(p.stock) * 1000) / 1000; return n.toLocaleString("es-AR") + (p.unit === "kg" ? " kg" : " u") };
+function addProd(p) {
+  cart.push({ id: p.id, name: p.name, price: num(p.price), unit: p.unit, qty: p.unit === "kg" ? 250 : 1 }); $("busq").value = ""; renderResults(); renderCart(); sync();
+  if (hayStock(p) && num(p.stock) <= 0) toast("Ojo: " + p.name + " figura sin stock");
+}
+// Descuenta (o devuelve) en la lista local lo mismo que descuenta la base al anotar o borrar una venta.
+function moverStock(items, sgn) {
+  (items || []).forEach(i => { const p = catalog.find(x => x.id === i.id); if (hayStock(p)) p.stock = num(p.stock) + sgn * (p.unit === "kg" ? i.qty / 1000 : i.qty) });
+  renderCatalog();
+}
 function renderResults() {
   const q = $("busq").value.trim().toLowerCase(), box = $("res"); box.innerHTML = "";
   if (!q) return;
   const m = catalog.filter(p => p.name.toLowerCase().includes(q) || (p.code && p.code.includes(q))).slice(0, 8);
   if (!m.length) { box.innerHTML = '<div class="mu" style="margin-top:6px">Sin resultados</div>'; return }
-  m.forEach(p => { const b = document.createElement("button"); b.type = "button"; b.className = "chip pick"; b.textContent = p.name + " · " + fmt(p.price) + (p.unit === "kg" ? " /kg" : ""); b.onclick = () => addProd(p); box.appendChild(b) });
+  m.forEach(p => { const b = document.createElement("button"); b.type = "button"; b.className = "chip pick"; b.textContent = p.name + " · " + fmt(p.price) + (p.unit === "kg" ? " /kg" : "") + (hayStock(p) ? (num(p.stock) > 0 ? " · quedan " + fmtStock(p) : " · sin stock") : ""); if (hayStock(p) && num(p.stock) <= 0) b.classList.add("sin-stock"); b.onclick = () => addProd(p); box.appendChild(b) });
 }
 function enterBusq() {
   const v = $("busq").value.trim(); if (!v) return;
@@ -324,13 +335,13 @@ async function anotarVenta() {
   const may = isWholesale(local);
   if (may && !mcli) return say("msg", "Elegí un cliente de la lista.", true);
   $("enviar").disabled = true; $("imp").hidden = true;
-  const row = { business_id: biz.id, shop_id: local, day: isoF("vfecha") || hoy(), client_name: may ? mcli : "", payment: pago, amount: monto, paid_with: efectivo ? pagaV : 0, items: cart.map(l => ({ name: l.name, qty: l.qty, unit: l.unit, price: l.price })) };
+  const row = { business_id: biz.id, shop_id: local, day: isoF("vfecha") || hoy(), client_name: may ? mcli : "", payment: pago, amount: monto, paid_with: efectivo ? pagaV : 0, items: cart.map(l => ({ id: l.id, name: l.name, qty: l.qty, unit: l.unit, price: l.price })) };
   const { data, error } = await sb.from("sales").insert(row).select().single();
   $("enviar").disabled = false;
   if (error) return say("msg", errMsg(error), true);
-  say("msg", "✓ Venta anotada");
+  say("msg", "✓ Venta anotada"); moverStock(data.items, -1);
   last = data; $("imp").hidden = false;
-  ultima = { id: data.id, amount: monto, shop: shopName(local), payment: pago, at: Date.now() }; store.set("ultimaVenta", JSON.stringify(ultima)); pintaUndo();
+  ultima = { id: data.id, amount: monto, shop: shopName(local), payment: pago, at: Date.now(), items: data.items }; store.set("ultimaVenta", JSON.stringify(ultima)); pintaUndo();
   mcli = null; $("cbus").value = ""; $("cres").hidden = true; $("mdel").hidden = true;
   cart = []; renderCart(); $("monto").value = ""; $("paga").value = ""; calc();
 }
@@ -346,7 +357,7 @@ async function deshacer() {
   const { error, count } = await sb.from("sales").delete({ count: "exact" }).eq("id", ultima.id);
   if (error) return aviso(errMsg(error));
   if (count === 0) aviso("No se pudo eliminar: ya pasaron más de 15 minutos. Pedile al dueño que la borre desde Resumen.");
-  else say("msg", "Venta eliminada");
+  else { say("msg", "Venta eliminada"); moverStock(ultima.items, 1) }
   ultima = null; last = null; store.del("ultimaVenta"); pintaUndo(); $("imp").hidden = true;
 }
 
@@ -744,8 +755,18 @@ function renderCatalog() {
     const tr = document.createElement("tr");
     const c2 = td(fmt(p.price) + (p.unit === "kg" ? " /kg" : "") + " ✎", "n"); c2.style.cursor = "pointer"; c2.title = "Cambiar precio";
     c2.onclick = async () => { const v = parseFloat(await ask("Nuevo precio de " + p.name, true, p.price)); if (v > 0) upd("products", p.id, { price: v }) };
+    const cs = td((hayStock(p) ? fmtStock(p) : "—") + " ✎", "n"); cs.style.cursor = "pointer"; cs.title = "Cambiar stock";
+    if (hayStock(p) && num(p.stock) <= 0) cs.classList.add("sin-stock");
+    cs.onclick = async () => {
+      const r = await ask("Stock de " + p.name + (p.unit === "kg" ? " (en kilos)" : " (unidades)") + ". Escribí la cantidad que hay, o +10 para sumar lo que llegó. Vacío = no controlar.", "text", hayStock(p) ? String(num(p.stock)) : "");
+      if (r === null) return;
+      const t = String(r).trim().replace(",", ".");
+      if (t === "") return upd("products", p.id, { stock: null });
+      const v = parseFloat(t); if (isNaN(v)) return aviso("Escribí un número, por ejemplo 12 o +10.");
+      upd("products", p.id, { stock: /^\+/.test(t) && hayStock(p) ? num(p.stock) + v : v });
+    };
     const c3 = td(); c3.appendChild(delBtn(async () => { if (await ask("¿Borrar " + p.name + "?")) { const { error } = await sb.from("products").delete().eq("id", p.id); error ? aviso(errMsg(error)) : reloadRefs() } }));
-    tr.append(td(p.name + (p.code ? " · " + p.code : "")), c2, c3); t.appendChild(tr);
+    tr.append(td(p.name + (p.code ? " · " + p.code : "")), c2, cs, c3); t.appendChild(tr);
   });
 }
 
@@ -942,11 +963,11 @@ function wireOnce() {
   $("pf").oninput = renderCatalog;
   $("pp").addEventListener("wheel", () => $("pp").blur());
   $("padd").onclick = async () => {
-    const name = $("pn").value.trim(), price = parseFloat($("pp").value), code = $("pc").value.trim();
+    const name = $("pn").value.trim(), price = parseFloat($("pp").value), code = $("pc").value.trim(), st = $("ps").value.trim();
     if (!name || !(price > 0)) return say("pm2", "Escribí el nombre y el precio.", true);
-    const { error } = await sb.from("products").insert({ business_id: biz.id, name, price, unit: punit === "Kilo" ? "kg" : "u", code });
+    const { error } = await sb.from("products").insert({ business_id: biz.id, name, price, unit: punit === "Kilo" ? "kg" : "u", code, stock: st === "" ? null : parseFloat(st) });
     if (error) return say("pm2", errMsg(error), true);
-    $("pn").value = ""; $("pp").value = ""; $("pc").value = ""; say("pm2", "✓ Producto agregado"); reloadRefs();
+    $("pn").value = ""; $("pp").value = ""; $("pc").value = ""; $("ps").value = ""; say("pm2", "✓ Producto agregado"); reloadRefs();
   };
   aplicarAncho();
   // Actualización en vivo del resumen cuando otro dispositivo anota algo

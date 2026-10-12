@@ -101,5 +101,36 @@ async function openApp() {
   check(!errors.length, "sin errores en la consola " + errors.join(" | "));
   await ctx.close();
 }
+{ // Stock: se carga en Ajustes, se ve en Vender, baja al vender y vuelve al deshacer
+  const { page, ctx, errors } = await openApp();
+  await page.click("#cfg");
+  await page.fill("#pn", "Maní"); await page.fill("#pp", "100"); await page.fill("#ps", "5"); await page.click("#padd");
+  await page.waitForFunction(() => document.getElementById("plist2").textContent.includes("5 u"));
+  await page.click("#cfg");
+  await page.fill("#busq", "man");
+  check((await page.textContent("#res")).includes("quedan 5 u"), "el buscador muestra cuántos quedan");
+  await page.click("#res .chip");
+  await page.fill("#cart .cq", "2");
+  await page.click("#enviar");
+  await page.waitForFunction(() => document.getElementById("msg").textContent.includes("anotada"));
+  const sold = await page.evaluate(() => window.__SB__.__db.sales.at(-1).items[0]);
+  check(sold && sold.id && sold.qty === 2, "la venta guarda qué producto se vendió");
+  await page.fill("#busq", "man");
+  check((await page.textContent("#res")).includes("quedan 3 u"), "después de vender 2 quedan 3");
+  await page.fill("#busq", "");
+  await page.click("#undo"); await page.click(".ov .chip.on");
+  await page.waitForFunction(() => document.getElementById("msg").textContent.includes("eliminada"));
+  await page.fill("#busq", "man");
+  check((await page.textContent("#res")).includes("quedan 5 u"), "al eliminar la venta el stock vuelve");
+  // Reponer: +10 suma a lo que había
+  await page.fill("#busq", "");
+  await page.click("#cfg");
+  await page.click("#plist2 td.n:nth-child(3)");
+  await page.fill(".ov input", "+10"); await page.click(".ov .chip.on");
+  await page.waitForFunction(() => document.getElementById("plist2").textContent.includes("15 u"));
+  check(true, "escribir +10 suma lo que llegó");
+  check(!errors.length, "sin errores en la consola " + errors.join(" | "));
+  await ctx.close();
+}
 await browser.close(); server.close();
 if (fails.length) { console.error(fails.length + " prueba(s) fallaron"); process.exit(1) }
