@@ -863,6 +863,16 @@ function goTab(t) {
   if (t === "prov") renderPTipo();
   refresh(); window.scrollTo({ top: 0 });
 }
+// Ajustes es una pantalla aparte: tapa la caja y las pestañas hasta que se vuelve.
+let scrollCaja = 0;
+function mostrarAjustes(on) {
+  if (on) scrollCaja = window.scrollY;
+  $("cfgbox").hidden = !on; $("screen-app").classList.toggle("en-ajustes", on);
+  $("cfg").setAttribute("aria-expanded", String(on));
+  window.scrollTo({ top: on ? 0 : scrollCaja });
+}
+function abrirAjustes() { history.pushState({ ajustes: true }, ""); mostrarAjustes(true) }
+function cerrarAjustes() { if (history.state && history.state.ajustes) history.back(); else mostrarAjustes(false) }
 function wireOnce() {
   document.querySelectorAll("input[type=number]").forEach(i => i.addEventListener("wheel", () => i.blur()));
   $("monto").oninput = calc; $("paga").oninput = calc;
@@ -939,7 +949,10 @@ function wireOnce() {
     downloadCsv("copia-seguridad-" + monthRange()[0] + ".csv", f);
   };
   $$("#tabs .tab").forEach(b => b.onclick = () => goTab(b.dataset.t));
-  $("cfg").onclick = () => { const o = $("cfgbox").hidden; $("cfgbox").hidden = !o; $("cfg").setAttribute("aria-expanded", String(o)); if (o) $("cfgbox").scrollIntoView({ block: "start" }) };
+  $("cfg").onclick = () => $("cfgbox").hidden ? abrirAjustes() : cerrarAjustes();
+  $("cfgBack").onclick = cerrarAjustes;
+  // El botón "atrás" del celular cierra Ajustes en vez de salir de la app.
+  window.addEventListener("popstate", () => { if (!$("cfgbox").hidden) mostrarAjustes(false) });
   $("cbizSave").onclick = async () => {
     const name = $("cbiz").value.trim(); if (!name) return aviso("Escribí el nombre del negocio.");
     const { error } = await sb.from("businesses").update({ name, ticket_footer: $("pie").value.trim() }).eq("id", biz.id);
