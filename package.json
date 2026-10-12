@@ -1,0 +1,9 @@
+{
+  "name": "caja-dieteticas",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:ui": "node tests/ui-smoke.mjs",
+    "test:db": "./supabase/tests/run.sh"
+  }
+}

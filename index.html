@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Caja Dietéticas</title>
+<meta name="description" content="Caja registradora simple para dietéticas y almacenes naturales: ventas, caja diaria, proveedores y balance del mes.">
+<meta name="theme-color" content="#2c7a4b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Ingreso -->
+<div id="screen-auth" class="center" hidden>
+  <div class="panel">
+    <div class="hero">
+      <div class="logo" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></div>
+      <h1>Caja Dietéticas</h1>
+      <p>La caja de tu dietética, en el celular. Ventas, caja diaria, proveedores y balance del mes.</p>
+    </div>
+    <div class="card">
+      <div class="seg" role="tablist">
+        <button type="button" id="tabLogin" class="on">Entrar</button>
+        <button type="button" id="tabSignup">Crear cuenta</button>
+      </div>
+      <form id="authForm" novalidate>
+        <label for="aemail">Email</label>
+        <input id="aemail" type="email" autocomplete="email" inputmode="email" placeholder="tu@email.com" required>
+        <label for="apass">Contraseña</label>
+        <input id="apass" type="password" autocomplete="current-password" placeholder="Mínimo 8 caracteres" required>
+        <button class="btn" id="authBtn" type="submit">Entrar</button>
+        <div class="ok" id="authMsg"></div>
+      </form>
+      <button type="button" class="linkbtn" id="forgot">Me olvidé la contraseña</button>
+    </div>
+    <div class="footer-note">30 días de prueba gratis. Sin tarjeta.</div>
+  </div>
+</div>
+
+<!-- Alta del negocio -->
+<div id="screen-setup" class="center" hidden>
+  <div class="panel">
+    <div class="hero">
+      <h1>Bienvenido</h1>
+      <p>Configurá tu negocio en un minuto. Todo se puede cambiar después.</p>
+    </div>
+    <div class="card">
+      <div class="seg">
+        <button type="button" id="setNew" class="on">Crear mi negocio</button>
+        <button type="button" id="setJoin">Tengo un código</button>
+      </div>
+      <form id="newForm" novalidate>
+        <label for="sname">Nombre del negocio</label>
+        <input id="sname" placeholder="Ej: Dietética La Cumbre" autocomplete="organization">
+        <label for="sowner">Tu nombre</label>
+        <input id="sowner" placeholder="Ej: Vicente" autocomplete="given-name">
+        <label>Locales</label>
+        <div class="mu">Cada local tiene su propia caja.</div>
+        <div id="sshops" class="list-edit"></div>
+        <button type="button" class="linkbtn" id="saddShop">+ Agregar otro local</button>
+        <label class="row" style="align-items:center;gap:10px;font-weight:500;flex-wrap:nowrap">
+          <input id="swhole" type="checkbox" style="width:22px;min-height:22px;flex:0 0 auto"> También vendo por mayor
+        </label>
+        <label>Medios de pago que aceptás</label>
+        <div class="row" id="spays"></div>
+        <div class="row" style="flex-wrap:nowrap;margin-top:8px"><input id="spayNew" placeholder="Otro medio de pago" autocomplete="off"><button type="button" id="spayAdd" class="chip camb">+ Agregar</button></div>
+        <button class="btn" type="submit" id="screate">Crear mi negocio</button>
+        <div class="ok" id="smsg"></div>
+      </form>
+      <form id="joinForm" novalidate hidden>
+        <div class="mu" style="margin-top:14px">Pedile el código al dueño del negocio. Lo genera en Ajustes → Equipo.</div>
+        <label for="jcode">Código de invitación</label>
+        <input id="jcode" placeholder="Ej: 4F9A21C0" autocomplete="off" style="text-transform:uppercase">
+        <label for="jname">Tu nombre</label>
+        <input id="jname" placeholder="Ej: Caro" autocomplete="given-name">
+        <button class="btn" type="submit" id="jbtn">Unirme</button>
+        <div class="ok" id="jmsg"></div>
+      </form>
+    </div>
+    <button type="button" class="linkbtn" data-logout style="display:block;margin:12px auto 0">Cerrar sesión</button>
+  </div>
+</div>
+
+<!-- App -->
+<div id="screen-app" hidden>
+<main>
+<header class="top">
+  <div class="brand">
+    <div class="logo" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></div>
+    <div style="min-width:0"><h1 id="bizName">Caja</h1><div class="hoy" id="hoyTxt"></div></div>
+  </div>
+  <button id="cfg" class="icon-btn" title="Ajustes" aria-label="Ajustes" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></button>
+</header>
+
+<div id="trialBanner" class="note" hidden style="margin-bottom:14px"></div>
+
+<!-- Ajustes -->
+<div id="cfgbox" hidden>
+  <div class="card mgr">
+    <h2 class="card-title">Negocio</h2>
+    <label for="cbiz">Nombre</label>
+    <input id="cbiz" autocomplete="off">
+    <label for="pie">Texto al pie del ticket</label>
+    <input id="pie" placeholder="Ej: ¡Gracias por su compra!" autocomplete="off">
+    <button class="btn sm" id="cbizSave">Guardar</button>
+  </div>
+  <div class="card mgr">
+    <h2 class="card-title">Locales</h2>
+    <div class="mu">Desactivar un local lo oculta de la caja pero conserva sus ventas.</div>
+    <div id="cshops" class="list-edit"></div>
+    <div class="row" style="flex-wrap:nowrap;margin-top:10px"><input id="cshopNew" placeholder="Nuevo local" autocomplete="off"><button type="button" id="cshopAdd" class="chip camb">+ Agregar</button></div>
+  </div>
+  <div class="card mgr">
+    <h2 class="card-title">Medios de pago</h2>
+    <div id="cpays" class="list-edit"></div>
+    <div class="row" style="flex-wrap:nowrap;margin-top:10px"><input id="cpayNew" placeholder="Nuevo medio de pago" autocomplete="off"><button type="button" id="cpayAdd" class="chip camb">+ Agregar</button></div>
+  </div>
+  <div class="card mgr">
+    <h2 class="card-title">Equipo</h2>
+    <div class="mu">Los cajeros solo ven la pantalla de Vender y sus propias ventas.</div>
+    <div class="scroll"><table id="cteam" style="margin-top:8px"></table></div>
+    <label>Invitar a alguien</label>
+    <div class="row">
+      <button type="button" class="chip" id="invCashier">Código para cajero</button>
+      <button type="button" class="chip owner-only" id="invAdmin">Código para administrador</button>
+    </div>
+    <div id="cinvites" class="list-edit"></div>
+  </div>
+  <div class="card mgr">
+    <h2 class="card-title">Productos</h2>
+    <div class="mu">Los productos cargados acá aparecen en el buscador de Vender.</div>
+    <label for="pn">Nombre</label>
+    <input id="pn" placeholder="Ej: Almendras peladas" autocomplete="off">
+    <label for="pp">Precio ($)</label>
+    <input id="pp" type="number" inputmode="decimal" placeholder="0">
+    <label>Se vende por</label>
+    <div class="row" id="pu"></div>
+    <label for="pc">Código de barras <span class="opt">(opcional)</span></label>
+    <div class="row" style="flex-wrap:nowrap"><input id="pc" inputmode="numeric" placeholder="Escaneá o escribí el código" autocomplete="off"><button type="button" id="pcam" class="chip camb" hidden aria-label="Escanear con la cámara">📷</button></div>
+    <button class="btn" id="padd">Agregar producto</button>
+    <div class="ok" id="pm2"></div>
+    <label for="pf">Lista de productos <span class="opt">(tocá el precio para cambiarlo)</span></label>
+    <input id="pf" placeholder="Filtrar..." autocomplete="off">
+    <div class="scroll"><table id="plist2" style="margin-top:10px"></table></div>
+  </div>
+  <div class="card">
+    <h2 class="card-title">Este dispositivo</h2>
+    <label>Ancho del papel del ticket</label>
+    <div class="row" id="anchos"></div>
+    <div class="row" style="margin-top:14px;justify-content:space-between;align-items:center">
+      <span class="mu" id="whoami"></span>
+      <button type="button" class="btn sm danger-ghost" data-logout style="width:auto">Cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
+<nav id="tabs" class="tabs" aria-label="Secciones">
+  <button class="tab on" data-t="venta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>Vender</button>
+  <button class="tab" data-t="apertura"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>Caja inicial</button>
+  <button class="tab" data-t="prov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62L18.3 9.38a1 1 0 0 0-.78-.38H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>Pagos</button>
+  <button class="tab" data-t="resumen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>Resumen</button>
+  <button class="tab" data-t="balance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16v-4M12 16V8M17 16v-7"/></svg>Balance</button>
+</nav>
+
+<section id="venta">
+  <div class="card">
+    <label style="margin-top:0">Local</label>
+    <div class="row" id="locales"></div>
+    <div id="cliwrap" hidden>
+      <label for="cbus">Cliente</label>
+      <div class="row" style="flex-wrap:nowrap"><input id="cbus" placeholder="Buscar o elegir cliente..." autocomplete="off"><button type="button" id="cbtn" class="chip camb" title="Ver lista" aria-label="Ver lista de clientes">▾</button></div>
+      <div id="cres" class="list-box" hidden></div>
+      <div class="row" style="flex-wrap:nowrap;margin-top:8px"><input id="mnuevo" placeholder="Nuevo cliente" autocomplete="off"><button type="button" id="madd" class="chip camb">+ Agregar</button></div>
+      <button type="button" id="mdel" class="textlink" hidden>Quitar este cliente de la lista</button>
+    </div>
+    <div id="prodwrap">
+      <label for="busq">Productos <span class="opt">(opcional)</span></label>
+      <div class="row" style="flex-wrap:nowrap"><input id="busq" placeholder="Buscar o escanear código..." autocomplete="off"><button type="button" id="bcam" class="chip camb" hidden aria-label="Escanear con la cámara">📷</button></div>
+      <div id="res"></div>
+      <div id="cart"></div>
+    </div>
+    <label for="monto">Total a cobrar ($)</label>
+    <input id="monto" type="number" inputmode="decimal" placeholder="0">
+    <label>Medio de pago</label>
+    <div class="row" id="pagos"></div>
+    <div id="cambio" hidden>
+      <label for="paga">Paga con ($)</label>
+      <input id="paga" type="number" inputmode="decimal" placeholder="0">
+      <div class="tot vuelto"><span class="mu" id="vl">Vuelto</span><span class="big" id="vv">$0</span></div>
+    </div>
+    <div class="cobro"><span class="lbl">Total</span><span class="big" id="totv">$0</span></div>
+    <button class="btn" id="enviar">Anotar venta</button>
+    <div class="ok" id="msg"></div>
+    <div class="row">
+      <button class="btn sm" id="imp" hidden>Imprimir ticket</button>
+    </div>
+    <button type="button" class="btn sm danger-ghost" id="undo" hidden>Eliminar la última venta</button>
+  </div>
+  <div class="card" id="vfwrap">
+    <label for="vfecha" style="margin-top:0">Fecha de la venta</label>
+    <input id="vfecha" type="text">
+    <div id="vfnote" class="note"></div>
+  </div>
+</section>
+
+<section id="resumen" hidden>
+  <div class="card">
+    <label for="dia" style="margin-top:0">Día</label>
+    <input id="dia" type="text">
+    <div style="margin-top:16px" class="mu">Total vendido en el día</div>
+    <div class="big" id="total" style="font-size:38px">$0</div>
+    <div class="scroll"><table id="rdia" style="margin-top:12px"></table></div>
+    <div id="porGrupo"></div>
+    <button class="btn sm" id="csv">Descargar ventas del día (CSV)</button>
+  </div>
+  <div class="card">
+    <div class="tot" style="margin-top:0"><span><b>Proveedores</b><br><span class="mu" id="rpcant"></span></span><span class="big" id="rptot">$0</span></div>
+    <div class="scroll"><table id="rpl" style="margin-top:10px"></table></div>
+  </div>
+  <div class="card">
+    <h2 class="sect">Ventas del día</h2>
+    <div class="scroll"><table id="lista"></table></div>
+  </div>
+</section>
+
+<section id="apertura" hidden>
+  <div class="card">
+    <label style="margin-top:0">Local</label>
+    <div class="row" id="alocales"></div>
+    <label for="amonto">Monto con el que inicia la caja ($)</label>
+    <input id="amonto" type="number" inputmode="decimal" placeholder="0">
+    <div class="note" id="ahint"></div>
+    <label for="adia">Fecha</label>
+    <input id="adia" type="text">
+    <button class="btn" id="aenviar">Guardar caja inicial</button>
+    <div class="ok" id="amsg"></div>
+  </div>
+  <div class="card">
+    <h2 class="sect">Caja inicial del día</h2>
+    <div class="scroll"><table id="alista"></table></div>
+  </div>
+</section>
+
+<section id="prov" hidden>
+  <div class="card">
+    <label style="margin-top:0">Tipo de pago</label>
+    <div class="row" id="ptipos"></div>
+    <div id="plocwrap">
+      <label>Local</label>
+      <div class="row" id="plocales"></div>
+    </div>
+    <div id="provwrap">
+      <label for="pbus">Proveedor</label>
+      <div class="row" style="flex-wrap:nowrap"><input id="pbus" placeholder="Buscar o elegir proveedor..." autocomplete="off"><button type="button" id="pbtn" class="chip camb" title="Ver lista" aria-label="Ver lista de proveedores">▾</button></div>
+      <div id="pres" class="list-box" hidden></div>
+      <div class="row" style="flex-wrap:nowrap;margin-top:8px"><input id="pnuevo" placeholder="Nuevo proveedor" autocomplete="off"><button type="button" id="padd2" class="chip camb">+ Agregar</button></div>
+      <button type="button" id="pdel" class="textlink" hidden>Quitar este proveedor de la lista</button>
+    </div>
+    <div id="detwrap" hidden>
+      <label id="detlbl" for="pnom">Detalle</label>
+      <input id="pnom" autocomplete="off">
+    </div>
+    <label for="pmonto">Monto ($)</label>
+    <input id="pmonto" type="number" inputmode="decimal" placeholder="0">
+    <div id="pagowrap">
+      <label>Medio de pago</label>
+      <div class="row" id="ppagos"></div>
+    </div>
+    <label for="pdia">Fecha</label>
+    <input id="pdia" type="text">
+    <button class="btn" id="penviar">Anotar pago a proveedor</button>
+    <div class="ok" id="pmsg"></div>
+  </div>
+  <div class="card">
+    <h2 class="sect">Pagos del día</h2>
+    <div id="ptot"></div>
+    <div class="scroll"><table id="plista" style="margin-top:10px"></table></div>
+  </div>
+</section>
+
+<section id="balance" hidden>
+  <div class="card">
+    <label for="bmes" style="margin-top:0">Mes</label>
+    <input id="bmes" type="text">
+    <div class="scroll"><table id="btabla" style="margin-top:12px"></table></div>
+    <div class="row" style="margin-top:12px">
+      <button type="button" class="btn sm" id="bdl1">Descargar balance del mes</button>
+      <button type="button" class="btn sm" id="bdl2">Copia de seguridad del mes</button>
+    </div>
+  </div>
+  <div class="card" id="bclicard">
+    <h2 class="sect">Mayorista por cliente</h2>
+    <div class="scroll"><table id="bcli"></table></div>
+  </div>
+</section>
+</main>
+</div>
+
+<div id="ticket"></div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

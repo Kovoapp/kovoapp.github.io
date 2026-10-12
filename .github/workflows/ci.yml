@@ -1,0 +1,40 @@
+name: Pruebas
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  permisos:
+    name: Permisos de la base de datos
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Correr esquema y pruebas
+        env:
+          PGURL: postgres://postgres:postgres@localhost:5432/postgres
+        run: ./supabase/tests/run.sh
+
+  interfaz:
+    name: Recorrido de la app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Instalar navegador de prueba
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Recorrer la app
+        run: node tests/ui-smoke.mjs
