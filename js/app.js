@@ -955,9 +955,14 @@ function wireOnce() {
   window.addEventListener("popstate", () => { if (!$("cfgbox").hidden) mostrarAjustes(false) });
   $("cbizSave").onclick = async () => {
     const name = $("cbiz").value.trim(); if (!name) return aviso("Escribí el nombre del negocio.");
-    const { error } = await sb.from("businesses").update({ name, ticket_footer: $("pie").value.trim() }).eq("id", biz.id);
+    const { error } = await sb.from("businesses").update({ name }).eq("id", biz.id);
     if (error) return aviso(errMsg(error));
     toast("Guardado"); reloadRefs();
+  };
+  $("pieSave").onclick = async () => {
+    const { error } = await sb.from("businesses").update({ ticket_footer: $("pie").value.trim() }).eq("id", biz.id);
+    if (error) return aviso(errMsg(error));
+    toast("Mensaje guardado"); reloadRefs();
   };
   $("cshopAdd").onclick = async () => {
     const n = $("cshopNew").value.trim(); if (!n) return;
