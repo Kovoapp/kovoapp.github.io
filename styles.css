@@ -33,6 +33,10 @@ button{font-family:inherit}
 .brand .hoy{font-size:13px;color:var(--mu)}
 .icon-btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx);display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
 .icon-btn[aria-expanded="true"]{background:var(--ac2);border-color:var(--ac3);color:var(--ac)}
+.en-ajustes #tabs,.en-ajustes section,.en-ajustes #trialBanner{display:none!important}
+.en-ajustes main{padding-bottom:40px}
+.cfg-head{display:flex;align-items:center;gap:12px;margin:0 0 14px}
+.cfg-head h2{font-family:var(--f-num);font-size:22px;font-weight:700;margin:0}
 
 /* Navegación */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;justify-content:center;gap:2px;

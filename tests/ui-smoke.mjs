@@ -81,6 +81,11 @@ for (const [w, h, scheme] of [[390, 844, "light"], [1100, 900, "dark"]]) {
   await page.waitForSelector("#cinvites .code");
   check(true, "crea un código de invitación");
   await snap("6-ajustes");
+  check(await page.isHidden("#tabs") && await page.isHidden("#balance"), "Ajustes se abre como pantalla aparte");
+  await page.goBack();
+  check(await page.isHidden("#cfgbox") && !(await page.isHidden("#balance")), "el botón atrás vuelve a la caja");
+  await page.click("#cfg"); await page.click("#cfgBack");
+  check(await page.isHidden("#cfgbox"), "la flecha de Ajustes vuelve a la caja");
 
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   check(!wide, `sin scroll horizontal a ${w}px`);
