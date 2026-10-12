@@ -4,7 +4,7 @@ Caja registradora para dietéticas y almacenes naturales que funciona en el celu
 
 **Qué hace**
 
-- Vender: locales, carrito con productos y código de barras, vuelto, ticket impreso y "deshacer" la última venta.
+- Vender: locales, carrito con productos y código de barras (cámara de cualquier celular o lector de mano), vuelto, ticket impreso y "deshacer" la última venta.
 - Venta mayorista con lista de clientes.
 - Caja inicial por local y efectivo esperado en caja.
 - Pagos a proveedores, impuestos y retiros de caja.
@@ -47,7 +47,9 @@ Entrá a la dirección, tocá **Crear cuenta**, confirmá el email y configurá 
 - `supabase/tests/run.sh`: crea la base en un Postgres vacío y comprueba que un negocio no vea los datos de otro y que los cajeros no puedan hacer cosas de dueño.
 - `tests/ui-smoke.mjs`: recorre la app (alta, venta, pago, resumen, balance, invitación) con datos falsos en un navegador.
 
-Las dos corren solas en cada cambio (GitHub Actions).
+- `tests/scanner.mjs`: escanea un código EAN-13 con una cámara simulada, da de alta un código nuevo y prueba el lector de mano.
+
+Las tres corren solas en cada cambio (GitHub Actions).
 
 ## Pendiente antes de cobrar
 
