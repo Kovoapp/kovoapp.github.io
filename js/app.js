@@ -904,7 +904,7 @@ async function boot() {
       document.body.innerHTML = '<div class="center"><div class="panel card"><h1 class="card-title">Falta configurar la base de datos</h1><p>Completá <code>js/config.js</code> con los datos de tu proyecto de Supabase. Los pasos están en el README.</p></div></div>';
       return;
     }
-    const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm");
+    const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm");
     sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
   }
   const { data } = await sb.auth.getSession();
