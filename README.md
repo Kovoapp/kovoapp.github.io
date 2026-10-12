@@ -20,6 +20,7 @@ Hace falta una cuenta gratis en [Supabase](https://supabase.com) (la base de dat
 
 1. Entrá a [supabase.com](https://supabase.com), creá una cuenta y un proyecto nuevo. Elegí la región São Paulo para que ande rápido desde Argentina.
 2. En el proyecto, abrí **SQL Editor**, pegá todo el contenido de [`supabase/schema.sql`](supabase/schema.sql) y tocá **Run**.
+   Si aparece el error `relation "businesses" already exists`, ya se había corrido antes. En una base nueva, corré [`supabase/reset.sql`](supabase/reset.sql) y después `schema.sql` otra vez.
 3. Abrí **Project Settings → API** y copiá dos datos: **Project URL** y **anon public key**.
 4. Pegalos en [`js/config.js`](js/config.js) (se puede editar directo en GitHub con el lápiz).
 
