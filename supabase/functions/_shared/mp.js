@@ -74,7 +74,7 @@ export async function crearSuscripcion({ env, fetch: fetchFn, authHeader, body }
   const pre = await mp("/preapproval", {
     method: "POST",
     body: {
-      reason: `Caja Dietéticas · ${biz.name}`.slice(0, 120),
+      reason: `Kovo · ${biz.name}`.slice(0, 120),
       external_reference: b,
       payer_email: (body.payer_email || user.email || "").trim(),
       auto_recurring: auto,

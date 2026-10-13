@@ -1,4 +1,4 @@
-# Caja Dietéticas
+# Kovo
 
 Caja registradora para dietéticas y almacenes naturales que funciona en el celular. Cada negocio tiene su cuenta y ve solo sus datos.
 
