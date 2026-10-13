@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="styles.css?v=6">
+<link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 
@@ -39,7 +39,7 @@
       </form>
       <button type="button" class="linkbtn" id="forgot">Me olvidé la contraseña</button>
     </div>
-    <div class="footer-note">30 días de prueba gratis. Sin tarjeta.</div>
+    <div class="footer-note">¿Querés usar la caja en tu negocio? <a class="contacto" target="_blank" rel="noopener">Escribinos</a> y te damos tu código de alta, con 7 días de prueba gratis.</div>
   </div>
 </div>
 
@@ -53,9 +53,12 @@
     <div class="card">
       <div class="seg">
         <button type="button" id="setNew" class="on">Crear mi negocio</button>
-        <button type="button" id="setJoin">Tengo un código</button>
+        <button type="button" id="setJoin">Me invitaron</button>
       </div>
       <form id="newForm" novalidate>
+        <label for="scodigo">Código de alta</label>
+        <input id="scodigo" placeholder="Ej: 7F3A9C21" autocomplete="off" style="text-transform:uppercase">
+        <div class="mu">Te lo damos cuando nos contactás. ¿No tenés uno? <a class="contacto" target="_blank" rel="noopener">Pedilo acá</a>.</div>
         <label for="sname">Nombre del negocio</label>
         <input id="sname" placeholder="Ej: Dietética La Cumbre" autocomplete="organization">
         <label for="sowner">Tu nombre</label>
@@ -74,7 +77,7 @@
         <div class="ok" id="smsg"></div>
       </form>
       <form id="joinForm" novalidate hidden>
-        <div class="mu" style="margin-top:14px">Pedile el código al dueño del negocio. Lo genera en Ajustes → Equipo.</div>
+        <div class="mu" style="margin-top:14px">Si trabajás en un negocio que ya usa la caja, pedile el código al dueño. Lo genera en Ajustes → Equipo.</div>
         <label for="jcode">Código de invitación</label>
         <input id="jcode" placeholder="Ej: 4F9A21C0" autocomplete="off" style="text-transform:uppercase">
         <label for="jname">Tu nombre</label>
@@ -105,6 +108,16 @@
   <div class="cfg-head">
     <button type="button" id="cfgBack" class="icon-btn" aria-label="Volver a la caja"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <h2>Ajustes</h2>
+  </div>
+  <div class="card" id="adminCard" hidden>
+    <h2 class="card-title">Administración de la app</h2>
+    <div class="mu">Solo lo ves vos. Para que un negocio nuevo se registre, creale un código de alta y pasáselo.</div>
+    <div class="stats" id="adminStats"></div>
+    <label for="adminNote">Para quién es <span class="opt">(opcional)</span></label>
+    <div class="row" style="flex-wrap:nowrap"><input id="adminNote" placeholder="Ej: Dietética Sol" autocomplete="off"><button type="button" id="adminNew" class="chip camb">Crear código</button></div>
+    <div id="adminCodes" class="list-edit"></div>
+    <label>Negocios</label>
+    <div id="adminBiz" class="list-edit"></div>
   </div>
   <div class="card mgr">
     <h2 class="card-title">Negocio</h2>
@@ -315,6 +328,6 @@
 </div>
 
 <div id="ticket"></div>
-<script type="module" src="js/app.js?v=6"></script>
+<script type="module" src="js/app.js?v=7"></script>
 </body>
 </html>

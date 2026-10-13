@@ -63,7 +63,7 @@ async function openApp() {
   await page.click("#tabSignup");
   await page.fill("#aemail", "ana@dietetica.com"); await page.fill("#apass", "clave1234"); await page.click("#authBtn");
   await page.waitForSelector("#screen-setup:not([hidden])");
-  await page.fill("#sname", "Dietética Ana"); await page.fill("#sshops input", "Centro"); await page.click("#screate");
+  await page.fill("#scodigo", "PRUEBA01"); await page.fill("#sname", "Dietética Ana"); await page.fill("#sshops input", "Centro"); await page.click("#screate");
   await page.waitForSelector("#screen-app:not([hidden])");
   return { page, ctx, errors };
 }

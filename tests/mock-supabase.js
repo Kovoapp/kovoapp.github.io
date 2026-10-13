@@ -2,17 +2,19 @@
 // No aplica permisos: eso se prueba aparte en supabase/tests.
 (() => {
   const uuid = () => crypto.randomUUID();
-  const db = { businesses: [], members: [], shops: [], payment_methods: [], clients: [], providers: [], products: [], sales: [], expenses: [], openings: [], invites: [] };
+  const db = { businesses: [], members: [], shops: [], payment_methods: [], clients: [], providers: [], products: [], sales: [], expenses: [], openings: [], invites: [], platform_admins: [],
+    signup_codes: [{ code: "PRUEBA01", note: "", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 30 * 864e5).toISOString(), used_by: null }] };
   let session = null; const listeners = [];
   const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") };
   const defaults = {
-    businesses: () => ({ id: uuid(), ticket_footer: "¡Gracias por su compra!", plan: "trial", trial_ends_at: new Date(Date.now() + 30 * 864e5).toISOString(), created_at: new Date().toISOString() }),
+    businesses: () => ({ id: uuid(), ticket_footer: "¡Gracias por su compra!", plan: "trial", trial_ends_at: new Date(Date.now() + 7 * 864e5).toISOString(), created_at: new Date().toISOString() }),
     shops: () => ({ id: uuid(), kind: "retail", position: 0, active: true }),
     payment_methods: () => ({ id: uuid(), wholesale: true, position: 0, active: true }),
     clients: () => ({ id: uuid() }), providers: () => ({ id: uuid() }), products: () => ({ id: uuid(), code: "" }),
     sales: () => ({ id: uuid(), day: today(), created_at: new Date().toISOString(), client_name: "", paid_with: 0, items: [], created_by: session && session.user.id }),
     expenses: () => ({ id: uuid(), day: today(), created_at: new Date().toISOString(), name: "", payment: "" }),
     openings: () => ({}), members: () => ({ created_at: new Date().toISOString(), display_name: "" }),
+    signup_codes: () => ({ code: Math.random().toString(16).slice(2, 10).toUpperCase(), note: "", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 30 * 864e5).toISOString(), used_by: null }),
     invites: () => ({ code: Math.random().toString(16).slice(2, 10).toUpperCase(), role: "cashier", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 7 * 864e5).toISOString(), used_by: null })
   };
   class Q {
@@ -45,12 +47,19 @@
     from: t => new Q(t),
     rpc: async (name, a) => {
       const uid = session.user.id;
+      const admin = db.platform_admins.some(a => a.user_id === uid);
+      if (name === "is_platform_admin") return { data: admin, error: null };
+      if (name === "admin_user_count") return { data: admin ? new Set(db.members.map(m => m.user_id)).size : null, error: null };
+      if (name === "admin_overview") return { data: admin ? db.businesses.map(b => ({ business_id: b.id, name: b.name, created_at: b.created_at, plan: b.plan, trial_ends_at: b.trial_ends_at, owner_email: b.created_by.replace(/^u-/, ""), members: db.members.filter(m => m.business_id === b.id).length, sales_30d: db.sales.filter(s => s.business_id === b.id).length })) : [], error: null };
       if (name === "create_business") {
+        const sc = db.signup_codes.find(c => c.code === String(a.p_code || "").trim().toUpperCase() && !c.used_by);
+        if (!sc && !admin) return { data: null, error: { message: "invalid_signup_code" } };
         const b = { ...defaults.businesses(), name: a.p_name, created_by: uid }; db.businesses.push(b);
         db.members.push({ ...defaults.members(), business_id: b.id, user_id: uid, role: "owner", display_name: a.p_owner_name });
         a.p_shops.forEach((s, i) => db.shops.push({ ...defaults.shops(), business_id: b.id, name: s, position: i + 1 }));
         if (a.p_wholesale) db.shops.push({ ...defaults.shops(), business_id: b.id, name: "Mayorista", kind: "wholesale", position: 100 });
         a.p_payments.forEach((p, i) => db.payment_methods.push({ ...defaults.payment_methods(), business_id: b.id, name: p, position: i + 1, wholesale: !["QR", "Posnet", "Tarjeta"].includes(p) }));
+        if (sc) sc.used_by = uid;
         return { data: b.id, error: null };
       }
       if (name === "join_business") {

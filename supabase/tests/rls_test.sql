@@ -3,7 +3,11 @@
 insert into auth.users values
   ('00000000-0000-0000-0000-00000000000a', 'ana@a.com'),
   ('00000000-0000-0000-0000-00000000000b', 'beto@b.com'),
-  ('00000000-0000-0000-0000-00000000000c', 'caja@a.com');
+  ('00000000-0000-0000-0000-00000000000c', 'caja@a.com'),
+  ('00000000-0000-0000-0000-00000000000d', 'duenio@app.com');
+-- El dueño de la app es administrador y entrega los códigos de alta
+insert into platform_admins values ('00000000-0000-0000-0000-00000000000d');
+insert into signup_codes (code, note) values ('ANA00001', 'Ana'), ('BETO0001', 'Beto');
 
 create function pg_temp.as_user(u text) returns void language plpgsql as $$
 begin
@@ -16,10 +20,22 @@ begin
   raise notice 'ok: %', msg;
 end $$;
 
--- Ana crea su negocio
+-- Ana crea su negocio (sin código no puede)
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+do $$ begin
+  begin
+    perform public.create_business('Sin código', 'Ana', array['X'], false, array['Efectivo']);
+    raise exception 'FALLÓ: se creó un negocio sin código';
+  exception when raise_exception then
+    if sqlerrm like 'FALLÓ%' then raise; end if;
+    raise notice 'ok: sin código de alta no se crea un negocio';
+  end;
+end $$;
+select pg_temp.check((select count(*) from signup_codes) = 0, 'Ana no ve los códigos de alta');
+select pg_temp.check(public.admin_user_count() is null and (select count(*) from public.admin_overview()) = 0, 'Ana no ve el resumen del administrador');
 select public.create_business('Dietética Ana', 'Ana', array['Centro','Norte'], true,
-  array['Efectivo','Transferencia','QR']) as a_id \gset
+  array['Efectivo','Transferencia','QR'], 'ana00001') as a_id \gset
+select pg_temp.check((select trial_ends_at::date from businesses) = current_date + 7, 'La prueba gratis dura 7 días');
 select pg_temp.check((select count(*) from shops) = 3, 'Ana ve sus 3 locales (2 + Mayorista)');
 select pg_temp.check((select wholesale from payment_methods where name='QR') = false, 'QR no se ofrece en mayorista');
 select id as centro from shops where name='Centro' \gset
@@ -31,7 +47,23 @@ reset role;
 
 -- Beto crea otro negocio y no ve nada de Ana
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
-select public.create_business('Almacén Beto', 'Beto', array['Único'], false, array['Efectivo']) as b_id \gset
+do $$ begin
+  begin
+    perform public.create_business('Otro', 'Beto', array['X'], false, array['Efectivo'], 'ANA00001');
+    raise exception 'FALLÓ: un código se usó dos veces';
+  exception when raise_exception then
+    if sqlerrm like 'FALLÓ%' then raise; end if;
+    raise notice 'ok: un código de alta sirve una sola vez';
+  end;
+end $$;
+do $$ begin
+  begin
+    insert into signup_codes (code) values ('HACKEADO');
+    raise exception 'FALLÓ: Beto creó un código de alta';
+  exception when insufficient_privilege then raise notice 'ok: Beto no puede crear códigos de alta';
+  end;
+end $$;
+select public.create_business('Almacén Beto', 'Beto', array['Único'], false, array['Efectivo'], 'BETO0001') as b_id \gset
 select set_config('my.b_id', :'b_id', false);
 select pg_temp.check((select count(*) from businesses) = 1, 'Beto ve solo su negocio');
 select pg_temp.check((select count(*) from sales) = 0, 'Beto no ve ventas de Ana');
@@ -114,6 +146,15 @@ insert into sales (business_id, shop_id, payment, amount, items)
   select :'b_id', id, 'Efectivo', 100, jsonb_build_array(jsonb_build_object('id', current_setting('my.mani'), 'qty', 5)) from shops limit 1;
 reset role;
 select pg_temp.check((select stock from products where id = :'mani') = 10, 'Una venta de Beto no toca el stock de Ana');
+
+-- El administrador ve el resumen y crea códigos
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000d');
+select pg_temp.check((select count(*) from public.admin_overview()) = 2, 'El administrador ve los 2 negocios');
+select pg_temp.check((select owner_email from public.admin_overview() where name = 'Dietética Ana') = 'ana@a.com', 'y el email de cada dueño');
+select pg_temp.check(public.admin_user_count() = 4, 'y cuántos usuarios hay');
+insert into signup_codes (note) values ('Dietética Sol');
+select pg_temp.check((select count(*) from signup_codes where used_by is null) = 1, 'El administrador crea códigos nuevos');
+reset role;
 
 -- Sin sesión no se ve nada
 select set_config('request.jwt.claim.sub', '', false);

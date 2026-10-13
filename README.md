@@ -21,7 +21,7 @@ Hace falta una cuenta gratis en [Supabase](https://supabase.com) (la base de dat
 
 1. Entrá a [supabase.com](https://supabase.com), creá una cuenta y un proyecto nuevo. Elegí la región São Paulo para que ande rápido desde Argentina.
 2. En el proyecto, abrí **SQL Editor**, pegá todo el contenido de [`supabase/schema.sql`](supabase/schema.sql) y tocá **Run**.
-   Si ya lo habías corrido antes de que existiera el stock, corré también [`supabase/stock.sql`](supabase/stock.sql) (se puede correr las veces que quieras).
+   Si ya lo habías corrido antes, corré también [`supabase/stock.sql`](supabase/stock.sql) y [`supabase/alta.sql`](supabase/alta.sql) (se pueden correr las veces que quieras).
    Si aparece el error `relation "businesses" already exists`, ya se había corrido antes. En una base nueva, corré [`supabase/reset.sql`](supabase/reset.sql) y después `schema.sql` otra vez.
 3. Abrí **Project Settings → API** y copiá dos datos: **Project URL** y **anon public key**.
 4. Pegalos en [`js/config.js`](js/config.js) (se puede editar directo en GitHub con el lápiz).
@@ -34,7 +34,19 @@ La "anon key" es pública por diseño. Lo que protege los datos son las reglas d
 2. Cada cambio en la rama `main` se publica solo. La dirección queda así: `https://<tu-usuario>.github.io/caja-dieteticas/`.
 3. Volvé a Supabase, abrí **Authentication → URL Configuration** y poné esa dirección en **Site URL**. Así los emails de confirmación y de "olvidé la contraseña" llevan a tu página.
 
-### 3. Probar
+### 3. Vos como administrador
+
+Para crear un negocio hace falta un **código de alta** que das vos. Creá tu cuenta en la página y después, en el SQL Editor de Supabase, corré esto con tu email:
+
+```sql
+insert into public.platform_admins (user_id) select id from auth.users where email = 'tu@email.com';
+```
+
+Desde ahí vas a ver **Ajustes → Administración de la app**: cuántos usuarios y negocios hay, y el botón para crear códigos de alta. Vos podés crear tu propio negocio sin código.
+
+En [`js/config.js`](js/config.js) completá tu WhatsApp o email para que el botón "Escribinos" de la página les llegue a vos.
+
+### 4. Probar
 
 Entrá a la dirección, tocá **Crear cuenta**, confirmá el email y configurá tu negocio. Para sumar a un empleado: **Ajustes → Equipo → Código para cajero**, y pasale el código.
 
@@ -55,6 +67,6 @@ Las tres corren solas en cada cambio (GitHub Actions).
 
 ## Pendiente antes de cobrar
 
-- Cobro de la suscripción (Mercado Pago). Hoy cada negocio nuevo arranca con 30 días de prueba y el aviso aparece en la app, pero no se corta el uso.
+- Cobro de la suscripción (Mercado Pago). Hoy cada negocio nuevo arranca con 7 días de prueba y el aviso aparece en la app, pero no se corta el uso.
 - Términos de uso y política de privacidad.
 - El ticket no es factura. La factura electrónica de ARCA (ex AFIP) es un módulo aparte.
