@@ -4,5 +4,5 @@ drop table if exists public.platform_settings, public.signup_codes, public.platf
   public.providers, public.clients, public.payment_methods, public.shops, public.members, public.businesses cascade;
 drop function if exists public.create_business(text, text, text[], boolean, text[]), public.create_business(text, text, text[], boolean, text[], text),
   public.is_platform_admin(), public.admin_overview(), public.admin_user_count(), public.can_sell(uuid), public.subscription_price(uuid),
-  public.mp_attach(uuid, text, numeric), public.mp_apply(uuid, text, text, timestamptz), public.admin_set_free(uuid, boolean), public.join_business(text, text),
+  public.mp_attach(uuid, text, numeric), public.mp_apply(uuid, text, text, timestamptz), public.admin_set_free(uuid, boolean), public.mp_set_price(uuid, numeric), public.join_business(text, text),
   public.my_role(uuid), public.is_member(uuid), public.is_manager(uuid), public.shop_in_business(uuid, uuid), public.sales_stock();

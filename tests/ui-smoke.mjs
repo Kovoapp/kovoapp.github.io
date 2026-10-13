@@ -107,7 +107,7 @@ for (const [w, h, scheme] of [[390, 844, "light"], [1100, 900, "dark"]]) {
   check(true, "el administrador crea un código de alta");
   await snap("7-admin");
   // Mi plan: prueba, suscripción y vencimiento
-  check((await page.textContent("#planEstado")).includes("Prueba gratis: quedan 7 días") && (await page.textContent("#planDetalle")).includes("$15.000"), "Mi plan muestra la prueba y el precio de $15.000");
+  check((await page.textContent("#planEstado")).includes("Prueba gratis: quedan 7 días") && (await page.textContent("#planDetalle")).includes("$15.000 el primer mes y después $18.000"), "Mi plan muestra la prueba y el precio: $15.000 el primer mes y después $18.000");
   await page.click("#planBtn");
   await page.waitForFunction(() => window.__SB__.__db.fn_calls.length === 1);
   check(await page.evaluate(() => { const c = window.__SB__.__db.fn_calls[0]; return c.name === "mp-suscribir" && c.body.action === "suscribir" && c.body.business_id === window.__SB__.__db.businesses[0].id }), "Suscribirme pide el link de pago a Mercado Pago");

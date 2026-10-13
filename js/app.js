@@ -252,13 +252,18 @@ function pintaPlan() {
 }
 async function renderPlan() {
   if (role !== "owner") return;
-  const { data: precio } = await sb.rpc("subscription_price", { b: biz.id });
-  const $p = "$" + Number(precio || 0).toLocaleString("es-AR");
+  const [{ data: precio }, { data: cfg }] = await Promise.all([sb.rpc("subscription_price", { b: biz.id }), sb.from("platform_settings").select("regular_price").eq("id", 1).single()]);
+  const pesos = n => "$" + Number(n || 0).toLocaleString("es-AR");
+  const normal = cfg ? Number(cfg.regular_price) : Number(precio);
+  // Precio de lanzamiento: solo el primer mes, después el precio normal.
+  const lanzamiento = biz.mp_status === "authorized" ? biz.intro_price : Number(precio) < normal;
+  const $p = lanzamiento ? pesos(precio) + " el primer mes y después " + pesos(normal) : pesos(precio);
   let estado, detalle, suscribir = true, cancelar = false;
   if (biz.plan === "free") { estado = "Acceso sin cargo"; detalle = "Tu negocio usa la caja sin pagar suscripción."; suscribir = false }
   else if (biz.mp_status === "authorized") {
-    estado = "Suscripción activa · " + $p + " por mes"; suscribir = false; cancelar = true;
-    detalle = futuro(biz.trial_ends_at) ? "El primer cobro es el " + fechaCorta(biz.trial_ends_at) + ", cuando termina la prueba." : "Mercado Pago te cobra todos los meses de forma automática.";
+    estado = "Suscripción activa"; suscribir = false; cancelar = true;
+    detalle = (futuro(biz.trial_ends_at) ? "El primer cobro es el " + fechaCorta(biz.trial_ends_at) + ", cuando termina la prueba. " : "")
+      + "Mercado Pago te cobra " + $p + " por mes de forma automática.";
   } else if (biz.mp_status === "pending") {
     estado = "Esperando la confirmación de Mercado Pago";
     detalle = "Si no terminaste el pago, podés volver a intentarlo.";

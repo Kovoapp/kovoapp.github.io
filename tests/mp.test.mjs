@@ -6,7 +6,7 @@ const fails = [];
 const check = (ok, msg) => { console.log((ok ? "ok   " : "FAIL ") + msg); if (!ok) fails.push(msg) };
 const env = { SUPABASE_URL: "https://x.supabase.co", SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: "sb_secret_x", MP_ACCESS_TOKEN: "TEST-123" };
 
-function falso({ rol = "owner", trial = Date.now() + 5 * 864e5, pre = {} } = {}) {
+function falso({ rol = "owner", trial = Date.now() + 5 * 864e5, pre = {}, cuota = {}, intro = false } = {}) {
   const calls = [];
   const biz = { id: "b1", name: "Dietética Ana", trial_ends_at: new Date(trial).toISOString(), mp_preapproval_id: "pre-9", mp_status: "authorized" };
   const fetch = async (url, opts = {}) => {
@@ -15,12 +15,15 @@ function falso({ rol = "owner", trial = Date.now() + 5 * 864e5, pre = {} } = {})
     const ok = j => ({ ok: true, status: 200, text: async () => JSON.stringify(j) });
     if (url.endsWith("/auth/v1/user")) return opts.headers.Authorization === "Bearer buena" ? ok({ id: "u1", email: "ana@a.com" }) : { ok: false, status: 401, text: async () => "{}" };
     if (url.endsWith("/rpc/my_role")) return ok(rol);
-    if (url.includes("/rest/v1/businesses?")) return ok([biz]);
+    if (url.includes("/rest/v1/businesses?")) return ok([{ ...biz, intro_price: intro }]);
+    if (url.includes("/rest/v1/platform_settings?")) return ok([{ regular_price: 18000 }]);
+    if (url.endsWith("/rpc/mp_set_price")) return ok(null);
     if (url.endsWith("/rpc/subscription_price")) return ok(15000);
     if (url.endsWith("/rpc/mp_attach") || url.endsWith("/rpc/mp_apply")) return ok(true);
     if (url === "https://api.mercadopago.com/preapproval") return ok({ id: "pre-1", init_point: "https://mp/checkout/pre-1", status: "pending" });
-    if (url.includes("/authorized_payments/")) return ok({ id: 77, preapproval_id: "pre-1" });
-    if (url.includes("/preapproval/")) return ok({ id: "pre-1", status: "authorized", external_reference: "b1", next_payment_date: "2026-11-20T10:00:00.000-03:00", ...pre });
+    if (url.includes("/authorized_payments/")) return ok({ id: 77, preapproval_id: "pre-1", status: "scheduled", ...cuota });
+    if (url.includes("/preapproval/") && opts.method === "PUT") return ok({ id: "pre-1", status: "authorized", ...(body.status ? { status: body.status } : {}) });
+    if (url.includes("/preapproval/")) return ok({ auto_recurring: { transaction_amount: 15000 }, summarized: { charged_quantity: 0 }, id: "pre-1", status: "authorized", external_reference: "b1", next_payment_date: "2026-11-20T10:00:00.000-03:00", ...pre });
     throw new Error("no esperado " + url);
   };
   return { fetch, calls };
@@ -74,5 +77,18 @@ const llamado = (calls, fin) => calls.find(c => c.url.endsWith(fin));
   f = falso();
   await procesarAviso({ env, fetch: f.fetch, url: "https://x/functions/v1/mp-webhook", body: { type: "subscription_preapproval", data: { id: "pre-1" }, status: "authorized" } });
   check(f.calls.some(c => c.url.endsWith("/preapproval/pre-1") && c.headers.Authorization === "Bearer TEST-123"), "no confía en el aviso: vuelve a preguntarle a Mercado Pago");
+}
+{ // Precio de lanzamiento solo el primer mes
+  let f = falso({ intro: true });
+  await procesarAviso({ env, fetch: f.fetch, url: "https://x/functions/v1/mp-webhook", body: { type: "subscription_preapproval", data: { id: "pre-1" } } });
+  check(!f.calls.some(c => c.method === "PUT"), "antes del primer cobro mantiene los $15000");
+  f = falso({ intro: true, cuota: { status: "processed" } });
+  await procesarAviso({ env, fetch: f.fetch, url: "https://x/functions/v1/mp-webhook?type=subscription_authorized_payment&data.id=77", body: {} });
+  const put = f.calls.find(c => c.method === "PUT");
+  check(put && put.url.endsWith("/preapproval/pre-1") && put.body.auto_recurring.transaction_amount === 18000, "cobrado el primer mes, la suscripción pasa a $18000");
+  check(llamado(f.calls, "/rpc/mp_set_price") && llamado(f.calls, "/rpc/mp_set_price").body.p_price === 18000, "y lo anota en el negocio");
+  f = falso({ intro: false, pre: { summarized: { charged_quantity: 3 } } });
+  await procesarAviso({ env, fetch: f.fetch, url: "https://x/functions/v1/mp-webhook", body: { type: "subscription_preapproval", data: { id: "pre-1" } } });
+  check(!f.calls.some(c => c.method === "PUT"), "a quien ya paga el precio normal no le cambia nada");
 }
 if (fails.length) { console.error(fails.length + " prueba(s) fallaron"); process.exit(1) }

@@ -168,6 +168,13 @@ do $$ begin
 end $$;
 do $$ begin
   begin
+    perform public.mp_set_price(current_setting('my.a_id')::uuid, 1);
+    raise exception 'FALLÓ: la app cambió su precio';
+  exception when insufficient_privilege then raise notice 'ok: la app no puede cambiar su precio';
+  end;
+end $$;
+do $$ begin
+  begin
     perform public.admin_set_free(current_setting('my.a_id')::uuid, true);
     raise exception 'FALLÓ: el dueño se dio acceso gratis';
   exception when raise_exception then
@@ -191,7 +198,11 @@ select public.mp_attach(:'a_id', 'pre-1', public.subscription_price(:'a_id'));
 select pg_temp.check(not public.mp_apply(:'a_id', 'otro', 'authorized', now() + interval '30 days'), 'Un aviso de otra suscripción no cambia nada');
 select pg_temp.check(public.mp_apply(:'a_id', 'pre-1', 'authorized', now() + interval '30 days'), 'Mercado Pago confirma la suscripción');
 reset role;
-select pg_temp.check((select plan = 'active' and price = 15000 and paid_until::date = current_date + 33 from businesses where id = :'a_id'), 'queda activa, con su precio y 3 días de gracia');
+select pg_temp.check((select plan = 'active' and price = 15000 and intro_price and paid_until::date = current_date + 33 from businesses where id = :'a_id'), 'queda activa, con precio de lanzamiento y 3 días de gracia');
+set role service_role;
+select public.mp_set_price(:'a_id', 18000);
+reset role;
+select pg_temp.check((select price = 18000 and not intro_price from businesses where id = :'a_id'), 'Pasado el primer mes queda en el precio normal');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000c');
 insert into sales (business_id, shop_id, payment, amount) values (:'a_id', :'centro', 'Efectivo', 100);
 select pg_temp.check(true, 'Con la suscripción al día se vuelve a vender');
@@ -212,8 +223,7 @@ insert into signup_codes (note) values ('Dietética Sol');
 select public.admin_set_free(current_setting('my.a_id')::uuid, true);
 select pg_temp.check(public.can_sell(current_setting('my.a_id')::uuid), 'El administrador puede dar acceso gratis');
 update platform_settings set founder_slots = 0;
-select pg_temp.check(public.subscription_price(current_setting('my.b_id')::uuid) = 18000 and public.subscription_price(current_setting('my.a_id')::uuid) = 15000,
-  'Pasados los primeros negocios el precio es 18000, y los primeros conservan el suyo');
+select pg_temp.check(public.subscription_price(current_setting('my.b_id')::uuid) = 18000, 'Pasados los primeros negocios el precio es 18000');
 select pg_temp.check((select count(*) from signup_codes where used_by is null) = 1, 'El administrador crea códigos nuevos');
 reset role;
 

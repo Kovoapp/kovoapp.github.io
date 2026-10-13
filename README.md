@@ -52,7 +52,7 @@ Entrá a la dirección, tocá **Crear cuenta**, confirmá el email y configurá 
 
 ### 5. Cobro con Mercado Pago
 
-Cada negocio tiene 7 días de prueba. Después tiene que suscribirse desde **Ajustes → Mi plan**: paga con Mercado Pago y se le cobra solo todos los meses. Si no paga, puede ver sus datos pero no anotar ventas. Los precios se cambian en **Administración de la app** (los primeros 10 negocios pagan $15.000 y los demás $18.000; cada uno conserva el precio con el que se suscribió).
+Cada negocio tiene 7 días de prueba. Después tiene que suscribirse desde **Ajustes → Mi plan**: paga con Mercado Pago y se le cobra solo todos los meses. Si no paga, puede ver sus datos pero no anotar ventas. Los precios se cambian en **Administración de la app** (los primeros 10 negocios pagan $15.000 el primer mes; después, y para los demás, $18.000).
 
 1. **Mercado Pago:** en [Tus integraciones](https://www.mercadopago.com.ar/developers/panel/app) creá una aplicación y copiá el **Access Token** (primero el de prueba, después el de producción).
 2. **Supabase → Edge Functions → Secrets:** agregá `MP_ACCESS_TOKEN` con ese token.
