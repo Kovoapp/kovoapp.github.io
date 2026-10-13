@@ -21,7 +21,7 @@ Hace falta una cuenta gratis en [Supabase](https://supabase.com) (la base de dat
 
 1. Entrá a [supabase.com](https://supabase.com), creá una cuenta y un proyecto nuevo. Elegí la región São Paulo para que ande rápido desde Argentina.
 2. En el proyecto, abrí **SQL Editor**, pegá todo el contenido de [`supabase/schema.sql`](supabase/schema.sql) y tocá **Run**.
-   Si ya lo habías corrido antes, corré también [`supabase/stock.sql`](supabase/stock.sql) y [`supabase/alta.sql`](supabase/alta.sql) (se pueden correr las veces que quieras).
+   Si ya lo habías corrido antes, corré también [`supabase/stock.sql`](supabase/stock.sql), [`supabase/alta.sql`](supabase/alta.sql) y [`supabase/pagos.sql`](supabase/pagos.sql) (se pueden correr las veces que quieras).
    Si aparece el error `relation "businesses" already exists`, ya se había corrido antes. En una base nueva, corré [`supabase/reset.sql`](supabase/reset.sql) y después `schema.sql` otra vez.
 3. Abrí **Project Settings → API** y copiá dos datos: **Project URL** y **anon public key**.
 4. Pegalos en [`js/config.js`](js/config.js) (se puede editar directo en GitHub con el lápiz).
@@ -50,6 +50,17 @@ En [`js/config.js`](js/config.js) completá tu WhatsApp o email para que el bot�
 
 Entrá a la dirección, tocá **Crear cuenta**, confirmá el email y configurá tu negocio. Para sumar a un empleado: **Ajustes → Equipo → Código para cajero**, y pasale el código.
 
+### 5. Cobro con Mercado Pago
+
+Cada negocio tiene 7 días de prueba. Después tiene que suscribirse desde **Ajustes → Mi plan**: paga con Mercado Pago y se le cobra solo todos los meses. Si no paga, puede ver sus datos pero no anotar ventas. Los precios se cambian en **Administración de la app** (los primeros 10 negocios pagan $15.000 y los demás $18.000; cada uno conserva el precio con el que se suscribió).
+
+1. **Mercado Pago:** en [Tus integraciones](https://www.mercadopago.com.ar/developers/panel/app) creá una aplicación y copiá el **Access Token** (primero el de prueba, después el de producción).
+2. **Supabase → Edge Functions → Secrets:** agregá `MP_ACCESS_TOKEN` con ese token.
+3. **Supabase → Account → Access Tokens:** creá un token. En GitHub, **Settings → Secrets and variables → Actions**, guardalo como `SUPABASE_ACCESS_TOKEN`. Después, en **Actions → Publicar funciones de Supabase → Run workflow**.
+4. **Mercado Pago → tu aplicación → Webhooks:** URL `https://nhtbjrhdjtlrhxrlezyj.supabase.co/functions/v1/mp-webhook`, evento **Planes y suscripciones**.
+
+Las funciones están en `supabase/functions/` y su lógica se prueba con `tests/mp.test.mjs`.
+
 ## Cómo está armada
 
 - Página estática sin paso de compilación: `index.html`, `styles.css`, `js/app.js`.
@@ -67,6 +78,5 @@ Las tres corren solas en cada cambio (GitHub Actions).
 
 ## Pendiente antes de cobrar
 
-- Cobro de la suscripción (Mercado Pago). Hoy cada negocio nuevo arranca con 7 días de prueba y el aviso aparece en la app, pero no se corta el uso.
 - Términos de uso y política de privacidad.
 - El ticket no es factura. La factura electrónica de ARCA (ex AFIP) es un módulo aparte.

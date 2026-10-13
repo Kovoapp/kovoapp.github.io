@@ -89,7 +89,8 @@ end $$;
 
 
 -- Resumen para el administrador de la plataforma: a los demás no les devuelve nada.
-create or replace function public.admin_overview()
+drop function if exists public.admin_overview();
+create function public.admin_overview()
 returns table (business_id uuid, name text, created_at timestamptz, plan text, trial_ends_at timestamptz,
                owner_email text, members int, sales_30d int)
 language sql stable security definer set search_path = public as $$

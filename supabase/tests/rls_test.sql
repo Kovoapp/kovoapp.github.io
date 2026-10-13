@@ -147,12 +147,73 @@ insert into sales (business_id, shop_id, payment, amount, items)
 reset role;
 select pg_temp.check((select stock from products where id = :'mani') = 10, 'Una venta de Beto no toca el stock de Ana');
 
+-- Suscripción: el dueño no puede tocar su plan; sin prueba ni pago no se venden
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+do $$ begin
+  begin
+    update businesses set plan = 'free', paid_until = now() + interval '10 years';
+    raise exception 'FALLÓ: el dueño se regaló el plan';
+  exception when insufficient_privilege then raise notice 'ok: el dueño no puede cambiar su plan ni su fecha de pago';
+  end;
+end $$;
+update businesses set name = 'Dietética Ana' where id = :'a_id';
+select pg_temp.check((select count(*) from businesses where name = 'Dietética Ana') = 1, 'pero sí el nombre del negocio');
+select pg_temp.check(public.subscription_price(:'a_id') = 15000, 'Los primeros negocios pagan 15000');
+do $$ begin
+  begin
+    perform public.mp_apply(current_setting('my.a_id')::uuid, 'x', 'authorized', now() + interval '1 year');
+    raise exception 'FALLÓ: la app pudo marcar un pago';
+  exception when insufficient_privilege then raise notice 'ok: la app no puede marcar pagos (solo Mercado Pago)';
+  end;
+end $$;
+do $$ begin
+  begin
+    perform public.admin_set_free(current_setting('my.a_id')::uuid, true);
+    raise exception 'FALLÓ: el dueño se dio acceso gratis';
+  exception when raise_exception then
+    if sqlerrm like 'FALLÓ%' then raise; end if;
+    raise notice 'ok: solo el administrador da acceso gratis';
+  end;
+end $$;
+reset role;
+update businesses set trial_ends_at = now() - interval '1 day' where id = :'a_id';
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000c');
+do $$ begin
+  begin
+    insert into sales (business_id, shop_id, payment, amount) values (current_setting('my.a_id')::uuid, current_setting('my.centro')::uuid, 'Efectivo', 100);
+    raise exception 'FALLÓ: se vendió con la prueba vencida';
+  exception when insufficient_privilege then raise notice 'ok: con la prueba vencida no se anotan ventas';
+  end;
+end $$;
+reset role;
+set role service_role;
+select public.mp_attach(:'a_id', 'pre-1', public.subscription_price(:'a_id'));
+select pg_temp.check(not public.mp_apply(:'a_id', 'otro', 'authorized', now() + interval '30 days'), 'Un aviso de otra suscripción no cambia nada');
+select pg_temp.check(public.mp_apply(:'a_id', 'pre-1', 'authorized', now() + interval '30 days'), 'Mercado Pago confirma la suscripción');
+reset role;
+select pg_temp.check((select plan = 'active' and price = 15000 and paid_until::date = current_date + 33 from businesses where id = :'a_id'), 'queda activa, con su precio y 3 días de gracia');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000c');
+insert into sales (business_id, shop_id, payment, amount) values (:'a_id', :'centro', 'Efectivo', 100);
+select pg_temp.check(true, 'Con la suscripción al día se vuelve a vender');
+reset role;
+set role service_role;
+select public.mp_apply(:'a_id', 'pre-1', 'cancelled', null);
+reset role;
+select pg_temp.check((select plan = 'paused' and public.can_sell(id) from businesses where id = :'a_id'), 'Si cancela, puede vender hasta el fin del período pagado');
+update businesses set paid_until = now() - interval '1 minute' where id = :'a_id';
+select pg_temp.check(not public.can_sell(:'a_id'), 'Pasado el período pagado, ya no');
+
 -- El administrador ve el resumen y crea códigos
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000d');
 select pg_temp.check((select count(*) from public.admin_overview()) = 2, 'El administrador ve los 2 negocios');
 select pg_temp.check((select owner_email from public.admin_overview() where name = 'Dietética Ana') = 'ana@a.com', 'y el email de cada dueño');
 select pg_temp.check(public.admin_user_count() = 4, 'y cuántos usuarios hay');
 insert into signup_codes (note) values ('Dietética Sol');
+select public.admin_set_free(current_setting('my.a_id')::uuid, true);
+select pg_temp.check(public.can_sell(current_setting('my.a_id')::uuid), 'El administrador puede dar acceso gratis');
+update platform_settings set founder_slots = 0;
+select pg_temp.check(public.subscription_price(current_setting('my.b_id')::uuid) = 18000 and public.subscription_price(current_setting('my.a_id')::uuid) = 15000,
+  'Pasados los primeros negocios el precio es 18000, y los primeros conservan el suyo');
 select pg_temp.check((select count(*) from signup_codes where used_by is null) = 1, 'El administrador crea códigos nuevos');
 reset role;
 
