@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="styles.css?v=9">
+<link rel="stylesheet" href="styles.css?v=10">
 </head>
 <body>
 
@@ -119,11 +119,11 @@
     <label>Precios por mes</label>
     <div class="row" style="flex-wrap:nowrap;align-items:flex-end">
       <div style="flex:1"><div class="mu">Primeros</div><input id="admSlots" type="number" inputmode="numeric"></div>
-      <div style="flex:1.4"><div class="mu">Precio de ellos</div><input id="admFounder" type="number" inputmode="numeric"></div>
-      <div style="flex:1.4"><div class="mu">Después</div><input id="admRegular" type="number" inputmode="numeric"></div>
+      <div style="flex:1.4"><div class="mu">Su primer mes</div><input id="admFounder" type="number" inputmode="numeric"></div>
+      <div style="flex:1.4"><div class="mu">Precio normal</div><input id="admRegular" type="number" inputmode="numeric"></div>
     </div>
     <button type="button" class="btn sm" id="admPrecios" style="width:auto">Guardar precios</button>
-    <div class="mu">Cada negocio conserva el precio con el que se suscribió.</div>
+    <div class="mu">Los primeros negocios que se suscriben pagan menos solo el primer mes. Después, todos pagan el precio normal.</div>
     <label>Negocios</label>
     <div id="adminBiz" class="list-edit"></div>
   </div>
@@ -348,6 +348,6 @@
 </div>
 
 <div id="ticket"></div>
-<script type="module" src="js/app.js?v=9"></script>
+<script type="module" src="js/app.js?v=10"></script>
 </body>
 </html>

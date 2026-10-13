@@ -376,6 +376,7 @@ alter table public.businesses add column if not exists price numeric(12, 2);
 alter table public.businesses add column if not exists paid_until timestamptz;
 alter table public.businesses add column if not exists mp_preapproval_id text;
 alter table public.businesses add column if not exists mp_status text;
+alter table public.businesses add column if not exists intro_price boolean not null default false; -- paga el precio de lanzamiento solo el primer mes
 alter table public.businesses drop constraint if exists businesses_plan_check;
 alter table public.businesses add constraint businesses_plan_check check (plan in ('trial', 'active', 'paused', 'free'));
 
@@ -383,7 +384,8 @@ alter table public.businesses add constraint businesses_plan_check check (plan i
 revoke update on public.businesses from anon, authenticated;
 grant update (name, ticket_footer) on public.businesses to authenticated;
 
--- Precios: los primeros "founder_slots" negocios que se suscriben pagan founder_price para siempre.
+-- Precios: los primeros "founder_slots" negocios que se suscriben pagan founder_price el primer mes;
+-- después, regular_price como todos.
 create table if not exists public.platform_settings (
   id int primary key default 1 check (id = 1),
   founder_price numeric(12, 2) not null default 15000,
@@ -417,7 +419,8 @@ $$;
 -- Lo llaman las funciones de Mercado Pago (con la clave de servicio), nunca la app.
 create or replace function public.mp_attach(p_business uuid, p_preapproval text, p_price numeric)
 returns void language sql security definer set search_path = public as $$
-  update businesses set mp_preapproval_id = p_preapproval, mp_status = 'pending', price = coalesce(price, p_price)
+  update businesses set mp_preapproval_id = p_preapproval, mp_status = 'pending', price = coalesce(price, p_price),
+         intro_price = coalesce(price, p_price) < (select regular_price from platform_settings where id = 1)
    where id = p_business
 $$;
 create or replace function public.mp_apply(p_business uuid, p_preapproval text, p_status text, p_next timestamptz)
@@ -437,6 +440,14 @@ begin
 end $$;
 
 -- El administrador puede dar acceso gratis a un negocio (o sacárselo).
+-- Pasado el primer mes, los primeros negocios pasan al precio normal.
+create or replace function public.mp_set_price(p_business uuid, p_price numeric)
+returns void language sql security definer set search_path = public as $$
+  update businesses set price = p_price, intro_price = false where id = p_business
+$$;
+revoke all on function public.mp_set_price(uuid, numeric) from public, anon, authenticated;
+grant execute on function public.mp_set_price(uuid, numeric) to service_role;
+
 create or replace function public.admin_set_free(p_business uuid, p_free boolean)
 returns void language plpgsql security definer set search_path = public as $$
 begin

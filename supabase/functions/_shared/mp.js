@@ -87,8 +87,8 @@ export async function procesarAviso({ env, fetch: fetchFn, url, body }) {
   const id = String((body && body.data && body.data.id) || q.get("data.id") || q.get("id") || "");
   if (!id) return res(200, { ignorado: "sin_id" });
 
-  let preId;
-  if (/authorized_payment/.test(tipo)) preId = (await mp(`/authorized_payments/${encodeURIComponent(id)}`)).preapproval_id;
+  let preId, cuota = null;
+  if (/authorized_payment/.test(tipo)) { cuota = await mp(`/authorized_payments/${encodeURIComponent(id)}`); preId = cuota.preapproval_id }
   else if (/preapproval/.test(tipo) && !/plan/.test(tipo)) preId = id;
   else return res(200, { ignorado: tipo });
   if (!preId) return res(200, { ignorado: "sin_suscripcion" });
@@ -99,5 +99,17 @@ export async function procesarAviso({ env, fetch: fetchFn, url, body }) {
     method: "POST",
     body: { p_business: pre.external_reference, p_preapproval: pre.id, p_status: pre.status, p_next: pre.next_payment_date || null },
   });
-  return res(200, { ok, status: pre.status });
+  // Precio de lanzamiento: solo el primer mes. Cobrada la primera cuota, la suscripción pasa al precio normal.
+  let precio;
+  const cobradas = Number((pre.summarized && pre.summarized.charged_quantity) || 0);
+  if (ok && pre.status === "authorized" && (cobradas >= 1 || (cuota && cuota.status === "processed"))) {
+    const [biz] = await db(`/rest/v1/businesses?id=eq.${encodeURIComponent(pre.external_reference)}&select=intro_price`);
+    const [cfg] = await db("/rest/v1/platform_settings?id=eq.1&select=regular_price");
+    if (biz && biz.intro_price && cfg) {
+      precio = Number(cfg.regular_price);
+      await mp(`/preapproval/${encodeURIComponent(pre.id)}`, { method: "PUT", body: { auto_recurring: { transaction_amount: precio, currency_id: "ARS" } } });
+      await db("/rest/v1/rpc/mp_set_price", { method: "POST", body: { p_business: pre.external_reference, p_price: precio } });
+    }
+  }
+  return res(200, { ok, status: pre.status, precio });
 }
