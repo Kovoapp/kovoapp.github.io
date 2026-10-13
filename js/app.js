@@ -286,10 +286,13 @@ async function renderPlan() {
 // Si el aviso de Mercado Pago no llegó, le preguntamos directamente cómo está la suscripción.
 let revisado = null;
 async function revisarPago(forzar) {
-  if (role !== "owner" || biz.mp_status !== "pending" || (!forzar && revisado === biz.mp_preapproval_id)) return;
-  revisado = biz.mp_preapproval_id;
+  // Pendiente, o activa pero con el mes pagado por vencer (por si no llegó el aviso del cobro mensual).
+  const porVencer = biz.mp_status === "authorized" && !futuro(new Date(new Date(biz.paid_until || 0).getTime() - 2 * 864e5));
+  const clave = biz.mp_preapproval_id + "|" + biz.mp_status + "|" + biz.paid_until;
+  if (role !== "owner" || !biz.mp_preapproval_id || !(biz.mp_status === "pending" || porVencer) || (!forzar && revisado === clave)) return;
+  revisado = clave;
   const { data, error } = await sb.functions.invoke("mp-suscribir", { body: { business_id: biz.id, action: "revisar" } });
-  if (!error && data && data.status && data.status !== "pending") reloadRefs();
+  if (!error && data && data.status && (data.status !== biz.mp_status || porVencer)) reloadRefs();
 }
 async function suscribir() {
   const email = $("planEmail").value.trim();

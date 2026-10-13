@@ -17,7 +17,7 @@ function clientes(env, fetchFn) {
       body: opts.body ? JSON.stringify(opts.body) : undefined,
     });
     const j = await leer(r);
-    if (!r.ok) throw new Error(`mercadopago ${r.status}: ${(j && (j.message || j.error)) || ""}`);
+    if (!r.ok) throw Object.assign(new Error(`mercadopago ${r.status}: ${(j && (j.message || j.error)) || ""}`), { status: r.status });
     return j;
   };
   // Supabase con la clave de servicio (o con la sesión del usuario si se pasa "auth").
@@ -95,13 +95,16 @@ export async function procesarAviso({ env, fetch: fetchFn, url, body }) {
   const id = String((body && body.data && body.data.id) || q.get("data.id") || q.get("id") || "");
   if (!id) return res(200, { ignorado: "sin_id" });
 
+  // Si Mercado Pago no conoce el id (por ejemplo, el aviso de prueba "Simular notificación"), no hay nada que hacer.
+  const buscar = path => mp(path).catch(e => { if (e.status === 404) return null; throw e });
   let preId, cuota = null;
-  if (/authorized_payment/.test(tipo)) { cuota = await mp(`/authorized_payments/${encodeURIComponent(id)}`); preId = cuota.preapproval_id }
+  if (/authorized_payment/.test(tipo)) { cuota = await buscar(`/authorized_payments/${encodeURIComponent(id)}`); preId = cuota && cuota.preapproval_id }
   else if (/preapproval/.test(tipo) && !/plan/.test(tipo)) preId = id;
   else return res(200, { ignorado: tipo });
   if (!preId) return res(200, { ignorado: "sin_suscripcion" });
 
-  const pre = await mp(`/preapproval/${encodeURIComponent(preId)}`);
+  const pre = await buscar(`/preapproval/${encodeURIComponent(preId)}`);
+  if (!pre) return res(200, { ignorado: "no_existe" });
   if (!pre.external_reference) return res(200, { ignorado: "sin_negocio" });
   return res(200, await aplicar(mp, db, pre, cuota));
 }

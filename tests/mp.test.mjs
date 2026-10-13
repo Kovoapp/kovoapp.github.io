@@ -21,6 +21,7 @@ function falso({ rol = "owner", trial = Date.now() + 5 * 864e5, pre = {}, cuota 
     if (url.endsWith("/rpc/subscription_price")) return ok(15000);
     if (url.endsWith("/rpc/mp_attach") || url.endsWith("/rpc/mp_apply")) return ok(true);
     if (url === "https://api.mercadopago.com/preapproval") return ok({ id: "pre-1", init_point: "https://mp/checkout/pre-1", status: "pending" });
+    if (url.endsWith("/123456")) return { ok: false, status: 404, text: async () => JSON.stringify({ message: "not found" }) };
     if (url.includes("/authorized_payments/")) return ok({ id: 77, preapproval_id: "pre-1", status: "scheduled", ...cuota });
     if (url.includes("/preapproval/") && opts.method === "PUT") return ok({ id: "pre-1", status: "authorized", ...(body.status ? { status: body.status } : {}) });
     if (url.includes("/preapproval/")) return ok({ auto_recurring: { transaction_amount: 15000 }, summarized: { charged_quantity: 0 }, id: "pre-1", status: "authorized", external_reference: "b1", next_payment_date: "2026-11-20T10:00:00.000-03:00", ...pre });
@@ -89,6 +90,14 @@ const llamado = (calls, fin) => calls.find(c => c.url.endsWith(fin));
   f = falso();
   await procesarAviso({ env, fetch: f.fetch, url: "https://x/functions/v1/mp-webhook", body: { type: "subscription_preapproval", data: { id: "pre-1" }, status: "authorized" } });
   check(f.calls.some(c => c.url.endsWith("/preapproval/pre-1") && c.headers.Authorization === "Bearer TEST-123"), "no confía en el aviso: vuelve a preguntarle a Mercado Pago");
+}
+{ // "Simular notificación" de Mercado Pago manda un id que no existe
+  let f = falso();
+  let out = await procesarAviso({ env, fetch: f.fetch, url: "https://x/functions/v1/mp-webhook", body: { action: "updated", entity: "preapproval", type: "subscription_preapproval", data: { id: "123456" } } });
+  check(out.status === 200 && !llamado(f.calls, "/rpc/mp_apply"), "un aviso de prueba con una suscripción que no existe responde bien y no toca nada");
+  f = falso();
+  out = await procesarAviso({ env, fetch: f.fetch, url: "https://x/functions/v1/mp-webhook?type=subscription_authorized_payment&data.id=123456", body: {} });
+  check(out.status === 200 && !llamado(f.calls, "/rpc/mp_apply"), "lo mismo con una cuota que no existe");
 }
 { // Precio de lanzamiento solo el primer mes
   let f = falso({ intro: true });
