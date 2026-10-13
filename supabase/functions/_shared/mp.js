@@ -36,7 +36,7 @@ function clientes(env, fetchFn) {
 
 const res = (status, body) => ({ status, body });
 
-// La llama la app (Ajustes → Mi plan). body: { business_id, action: "suscribir" | "cancelar", payer_email? }
+// La llama la app (Ajustes → Mi plan). body: { business_id, action: "suscribir" | "cancelar" | "revisar", payer_email? }
 export async function crearSuscripcion({ env, fetch: fetchFn, authHeader, body }) {
   const { mp, db } = clientes(env, fetchFn);
   if (!env.MP_ACCESS_TOKEN) return res(500, { error: "falta_mp_access_token" });
@@ -51,6 +51,14 @@ export async function crearSuscripcion({ env, fetch: fetchFn, authHeader, body }
 
   const [biz] = await db(`/rest/v1/businesses?id=eq.${encodeURIComponent(b)}&select=id,name,trial_ends_at,mp_preapproval_id,mp_status`);
   if (!biz) return res(404, { error: "no_existe" });
+
+  // Revisar: le pregunta a Mercado Pago cómo está la suscripción, por si el aviso no llegó.
+  if (body.action === "revisar") {
+    if (!biz.mp_preapproval_id) return res(400, { error: "sin_suscripcion" });
+    const pre = await mp(`/preapproval/${encodeURIComponent(biz.mp_preapproval_id)}`);
+    if (pre.external_reference !== b) return res(409, { error: "otro_negocio" });
+    return res(200, await aplicar(mp, db, pre, null));
+  }
 
   if (body.action === "cancelar") {
     if (!biz.mp_preapproval_id) return res(400, { error: "sin_suscripcion" });
@@ -95,6 +103,11 @@ export async function procesarAviso({ env, fetch: fetchFn, url, body }) {
 
   const pre = await mp(`/preapproval/${encodeURIComponent(preId)}`);
   if (!pre.external_reference) return res(200, { ignorado: "sin_negocio" });
+  return res(200, await aplicar(mp, db, pre, cuota));
+}
+
+// Anota en el negocio el estado de la suscripción que devolvió Mercado Pago.
+async function aplicar(mp, db, pre, cuota) {
   const ok = await db("/rest/v1/rpc/mp_apply", {
     method: "POST",
     body: { p_business: pre.external_reference, p_preapproval: pre.id, p_status: pre.status, p_next: pre.next_payment_date || null },
@@ -111,5 +124,5 @@ export async function procesarAviso({ env, fetch: fetchFn, url, body }) {
       await db("/rest/v1/rpc/mp_set_price", { method: "POST", body: { p_business: pre.external_reference, p_price: precio } });
     }
   }
-  return res(200, { ok, status: pre.status, precio });
+  return { ok, status: pre.status, precio };
 }

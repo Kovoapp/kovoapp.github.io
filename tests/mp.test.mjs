@@ -63,6 +63,18 @@ const llamado = (calls, fin) => calls.find(c => c.url.endsWith(fin));
   check(out.status === 200 && put && put.url.endsWith("/preapproval/pre-9") && put.body.status === "cancelled", "cancela la suscripción en Mercado Pago");
   check(llamado(f.calls, "/rpc/mp_apply").body.p_status === "cancelled", "y lo anota en el negocio");
 }
+{ // Revisar el estado sin esperar el aviso
+  let f = falso();
+  let out = await crearSuscripcion({ env, fetch: f.fetch, authHeader: "Bearer buena", body: { business_id: "b1", action: "revisar" } });
+  check(out.status === 200 && out.body.status === "authorized" && f.calls.some(c => c.url.endsWith("/preapproval/pre-9") && c.method === "GET"), "revisar le pregunta a Mercado Pago por la suscripción del negocio");
+  check(llamado(f.calls, "/rpc/mp_apply").body.p_status === "authorized", "y anota lo que responde");
+  f = falso({ pre: { external_reference: "otro" } });
+  out = await crearSuscripcion({ env, fetch: f.fetch, authHeader: "Bearer buena", body: { business_id: "b1", action: "revisar" } });
+  check(out.status === 409 && !llamado(f.calls, "/rpc/mp_apply"), "no anota una suscripción de otro negocio");
+  f = falso({ rol: "cashier" });
+  out = await crearSuscripcion({ env, fetch: f.fetch, authHeader: "Bearer buena", body: { business_id: "b1", action: "revisar" } });
+  check(out.status === 403, "un cajero no puede revisar");
+}
 { // Avisos de Mercado Pago
   let f = falso();
   let out = await procesarAviso({ env, fetch: f.fetch, url: "https://x/functions/v1/mp-webhook", body: { type: "subscription_preapproval", data: { id: "pre-1" } } });

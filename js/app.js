@@ -227,7 +227,7 @@ async function enter() {
   if (/suscripcion=ok/.test(location.search)) {
     history.replaceState(null, "", location.pathname);
     toast("¡Gracias! Mercado Pago está confirmando tu suscripción.");
-    setTimeout(reloadRefs, 6000);
+    revisarPago(true);
   }
 }
 
@@ -281,6 +281,15 @@ async function renderPlan() {
   $("planEstado").textContent = estado; $("planDetalle").textContent = detalle;
   $("planSuscribir").hidden = !suscribir; $("planCancel").hidden = !cancelar;
   if (!$("planEmail").value) $("planEmail").placeholder = user.email || "tu@email.com";
+  revisarPago();
+}
+// Si el aviso de Mercado Pago no llegó, le preguntamos directamente cómo está la suscripción.
+let revisado = null;
+async function revisarPago(forzar) {
+  if (role !== "owner" || biz.mp_status !== "pending" || (!forzar && revisado === biz.mp_preapproval_id)) return;
+  revisado = biz.mp_preapproval_id;
+  const { data, error } = await sb.functions.invoke("mp-suscribir", { body: { business_id: biz.id, action: "revisar" } });
+  if (!error && data && data.status && data.status !== "pending") reloadRefs();
 }
 async function suscribir() {
   const email = $("planEmail").value.trim();
