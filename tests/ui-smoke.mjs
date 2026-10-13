@@ -32,6 +32,7 @@ for (const [w, h, scheme] of [[390, 844, "light"], [1100, 900, "dark"]]) {
 
   await page.waitForSelector("#screen-auth:not([hidden])");
   await snap("1-ingreso");
+  check((await page.getAttribute(".footer-note a.contacto", "href") || "").startsWith("https://wa.me/5493329593188"), "el botón Escribinos abre WhatsApp");
   await page.click("#tabSignup");
   await page.fill("#aemail", "ana@dietetica.com"); await page.fill("#apass", "clave1234");
   await page.click("#authBtn");
