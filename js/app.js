@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
+import { SUPABASE_URL, SUPABASE_ANON_KEY, CONTACTO_WHATSAPP, CONTACTO_EMAIL } from "./config.js";
 
 // ---------------------------------------------------------------
 // Utilidades
@@ -28,6 +28,7 @@ function errMsg(e) {
   if (/already registered|already exists/i.test(m)) return "Ya hay una cuenta con ese email. Probá con Entrar.";
   if (/password should be at least|weak/i.test(m)) return "La contraseña tiene que tener al menos 8 caracteres.";
   if (/email not confirmed/i.test(m)) return "Confirmá tu email: te mandamos un link a tu casilla.";
+  if (/invalid_signup_code/.test(m)) return "Ese código de alta no existe, ya se usó o venció. Escribinos para pedir uno.";
   if (/invalid_invite/.test(m)) return "Ese código no existe, ya se usó o venció. Pedí uno nuevo.";
   if (/duplicate key|unique/i.test(m)) return "Ya existe uno con ese nombre o código.";
   return "Algo salió mal. Probá de nuevo en un momento.";
@@ -170,18 +171,25 @@ function renderSPays() {
 $("saddShop").onclick = () => { shopInput(); $("sshops").lastChild.querySelector("input").focus() };
 $("spayAdd").onclick = () => { const v = $("spayNew").value.trim(); if (!v) return; if (!sPayAll.includes(v)) sPayAll.push(v); if (!sPays.includes(v)) sPays.push(v); $("spayNew").value = ""; renderSPays() };
 $("spayNew").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); $("spayAdd").click() } };
+// Links de contacto para pedir un código de alta (se configuran en js/config.js)
+const msgContacto = "Hola, quiero usar la caja en mi negocio. ¿Me pasan un código de alta?";
+const urlContacto = CONTACTO_WHATSAPP ? "https://wa.me/" + CONTACTO_WHATSAPP.replace(/\D/g, "") + "?text=" + encodeURIComponent(msgContacto)
+  : CONTACTO_EMAIL ? "mailto:" + CONTACTO_EMAIL + "?subject=" + encodeURIComponent("Código de alta") + "&body=" + encodeURIComponent(msgContacto) : "";
+document.querySelectorAll("a.contacto").forEach(a => { if (urlContacto) a.href = urlContacto; else a.replaceWith(a.textContent) });
 $("setNew").onclick = () => { $("setNew").classList.add("on"); $("setJoin").classList.remove("on"); $("newForm").hidden = false; $("joinForm").hidden = true };
 $("setJoin").onclick = () => { $("setJoin").classList.add("on"); $("setNew").classList.remove("on"); $("newForm").hidden = true; $("joinForm").hidden = false };
 $("newForm").onsubmit = async e => {
   e.preventDefault();
   const name = $("sname").value.trim(), owner = $("sowner").value.trim();
   const shopList = [...$("sshops").querySelectorAll("input")].map(i => i.value.trim()).filter(Boolean);
+  const codigo = $("scodigo").value.trim();
+  if (!codigo) return say("smsg", "Escribí el código de alta que te dimos.", true);
   if (!name) return say("smsg", "Escribí el nombre del negocio.", true);
   if (!shopList.length) return say("smsg", "Agregá al menos un local.", true);
   if (!sPays.length) return say("smsg", "Elegí al menos un medio de pago.", true);
   $("screate").disabled = true;
   const ordered = sPayAll.filter(p => sPays.includes(p));
-  const { data, error } = await sb.rpc("create_business", { p_name: name, p_owner_name: owner, p_shops: shopList, p_wholesale: $("swhole").checked, p_payments: ordered });
+  const { data, error } = await sb.rpc("create_business", { p_name: name, p_owner_name: owner, p_shops: shopList, p_wholesale: $("swhole").checked, p_payments: ordered, p_code: codigo });
   $("screate").disabled = false;
   if (error) return say("smsg", errMsg(error), true);
   store.set("biz", data); await enter();
@@ -717,7 +725,7 @@ function renderSettings() {
     }
     tr.append(nm, rl, c3); tt.appendChild(tr);
   });
-  cargarInvites();
+  cargarInvites(); cargarAdmin();
   // Productos
   chips($("pu"), ["Unidad", "Kilo"], () => punit, v => punit = v);
   renderCatalog();
@@ -739,6 +747,37 @@ async function cargarInvites() {
     cp.onclick = async () => { const msg = `Te invito a la caja de ${biz.name}. Entrá a ${location.origin + location.pathname}, creá tu cuenta y usá el código ${inv.code}`; try { await navigator.clipboard.writeText(msg); toast("Invitación copiada") } catch (e) { aviso(msg) } };
     r.append(c, d, cp, delBtn(async () => { await sb.from("invites").delete().eq("code", inv.code); cargarInvites() }, "Anular código"));
     box.appendChild(r);
+  });
+}
+// Administración de la app: códigos de alta y negocios. Solo para los administradores de la plataforma.
+async function cargarAdmin() {
+  const { data: soy } = await sb.rpc("is_platform_admin");
+  $("adminCard").hidden = !soy; if (!soy) return;
+  const [ov, uc, cs] = await Promise.all([sb.rpc("admin_overview"), sb.rpc("admin_user_count"),
+    sb.from("signup_codes").select("*").is("used_by", null).gt("expires_at", new Date().toISOString()).order("created_at", { ascending: false })]);
+  const negocios = ov.data || [];
+  const activos = negocios.filter(b => b.plan === "active").length;
+  const pl = (n, uno, varios) => n + " " + (n === 1 ? uno : varios);
+  $("adminStats").textContent = `${pl(uc.data ?? 0, "usuario", "usuarios")} · ${pl(negocios.length, "negocio", "negocios")} · ${activos} pagando`;
+  const box = $("adminCodes"); box.innerHTML = "";
+  (cs.data || []).forEach(sc => {
+    const r = document.createElement("div"); r.className = "item";
+    const c = document.createElement("span"); c.className = "code"; c.textContent = sc.code;
+    const d = document.createElement("span"); d.className = "mu"; d.style.flex = "1 1 120px"; d.textContent = (sc.note ? sc.note + " · " : "") + "vence " + new Date(sc.expires_at).toLocaleDateString("es-AR");
+    const cp = document.createElement("button"); cp.type = "button"; cp.className = "chip camb"; cp.textContent = "Copiar";
+    cp.onclick = async () => { const msg = `Tu código de alta para la caja es ${sc.code}. Entrá a ${location.origin + location.pathname}, tocá "Crear cuenta" y después "Crear mi negocio". Tenés 7 días de prueba gratis.`; try { await navigator.clipboard.writeText(msg); toast("Mensaje copiado") } catch (e) { aviso(msg) } };
+    r.append(c, d, cp, delBtn(async () => { await sb.from("signup_codes").delete().eq("code", sc.code); cargarAdmin() }, "Anular código"));
+    box.appendChild(r);
+  });
+  const t = $("adminBiz"); t.innerHTML = "";
+  if (!negocios.length) { t.innerHTML = '<div class="mu" style="padding:10px 0">Todavía no hay negocios</div>'; return }
+  negocios.forEach(b => {
+    const dias = Math.ceil((new Date(b.trial_ends_at) - Date.now()) / 864e5);
+    const estado = b.plan === "active" ? "Pagando" : b.plan === "paused" ? "Pausado" : dias > 0 ? `Prueba: ${dias} día${dias === 1 ? "" : "s"}` : "Prueba vencida";
+    const r = document.createElement("div"); r.className = "item"; r.style.display = "block";
+    const n = document.createElement("div"); n.style.fontWeight = "600"; n.textContent = b.name;
+    const d = document.createElement("div"); d.className = "mu"; d.textContent = `${b.owner_email || ""} · ${estado} · ${b.sales_30d} ventas en 30 días`;
+    r.append(n, d); t.appendChild(r);
   });
 }
 async function invitar(rol) {
@@ -975,6 +1014,11 @@ function wireOnce() {
     const { error } = await sb.from("payment_methods").insert({ business_id: biz.id, name: n, position: pays.length + 1 });
     if (error) return aviso(errMsg(error));
     $("cpayNew").value = ""; reloadRefs();
+  };
+  $("adminNew").onclick = async () => {
+    const { error } = await sb.from("signup_codes").insert({ note: $("adminNote").value.trim() });
+    if (error) return aviso(errMsg(error));
+    $("adminNote").value = ""; toast("Código de alta creado"); cargarAdmin();
   };
   $("invCashier").onclick = () => invitar("cashier");
   $("invAdmin").onclick = () => invitar("admin");

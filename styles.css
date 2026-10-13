@@ -176,3 +176,4 @@ a{color:var(--ac)}
 .scan-view video{display:block;width:100%;max-height:65dvh;object-fit:cover}
 .scan-frame{position:absolute;left:10%;right:10%;top:32%;bottom:32%;border:3px solid #fff;border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
 .scan-msg{color:#fff;font-weight:600;font-size:17px;text-align:center}
+.stats{font-family:var(--f-num);font-size:17px;font-weight:700;margin:10px 0 2px}

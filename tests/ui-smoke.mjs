@@ -42,6 +42,12 @@ for (const [w, h, scheme] of [[390, 844, "light"], [1100, 900, "dark"]]) {
   await page.check("#swhole");
   await snap("2-alta");
   await page.click("#screate");
+  await page.waitForFunction(() => document.getElementById("smsg").textContent.includes("código"));
+  check(true, "sin código de alta no deja crear el negocio");
+  await page.fill("#scodigo", "NOEXISTE"); await page.click("#screate");
+  await page.waitForFunction(() => document.getElementById("smsg").textContent.includes("no existe"));
+  check(true, "con un código que no existe avisa");
+  await page.fill("#scodigo", "prueba01"); await page.click("#screate");
   await page.waitForSelector("#screen-app:not([hidden])");
   check(await page.textContent("#bizName") === "Dietética Ana", "muestra el nombre del negocio");
   check((await page.$$("#locales .chip")).length === 3, "ofrece los 3 locales (2 + Mayorista)");
@@ -89,6 +95,17 @@ for (const [w, h, scheme] of [[390, 844, "light"], [1100, 900, "dark"]]) {
   check(await page.isHidden("#cfgbox") && !(await page.isHidden("#balance")), "el botón atrás vuelve a la caja");
   await page.click("#cfg"); await page.click("#cfgBack");
   check(await page.isHidden("#cfgbox"), "la flecha de Ajustes vuelve a la caja");
+  check(await page.isHidden("#adminCard"), "un negocio común no ve la administración de la app");
+  // El dueño de la app ve la administración y crea códigos de alta
+  await page.evaluate(() => window.__SB__.__db.platform_admins.push({ user_id: "u-ana@dietetica.com" }));
+  await page.click("#cfg"); await page.click("#cbizSave");
+  await page.waitForSelector("#adminCard:not([hidden])");
+  check((await page.textContent("#adminBiz")).includes("Dietética Ana"), "el administrador ve la lista de negocios");
+  await page.fill("#adminNote", "Dietética Sol"); await page.click("#adminNew");
+  await page.waitForFunction(() => document.getElementById("adminCodes").textContent.includes("Dietética Sol"));
+  check(true, "el administrador crea un código de alta");
+  await snap("7-admin");
+  await page.click("#cfgBack");
 
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   check(!wide, `sin scroll horizontal a ${w}px`);
