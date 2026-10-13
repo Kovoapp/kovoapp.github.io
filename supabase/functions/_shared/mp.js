@@ -6,7 +6,7 @@ export const cors = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-const SITIO = "https://vicentesampol39-ux.github.io/caja-dieteticas/";
+const SITIO = "https://kovoapp.github.io/";
 
 function clientes(env, fetchFn) {
   const leer = async r => { const t = await r.text(); try { return t ? JSON.parse(t) : null } catch { return t } };
