@@ -5,6 +5,7 @@
   "scripts": {
     "test:ui": "node tests/ui-smoke.mjs",
     "test:scanner": "node tests/scanner.mjs",
-    "test:db": "./supabase/tests/run.sh"
+    "test:db": "./supabase/tests/run.sh",
+    "test:mp": "node tests/mp.test.mjs"
   }
 }

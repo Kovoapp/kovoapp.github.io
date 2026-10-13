@@ -40,3 +40,5 @@ jobs:
         run: node tests/ui-smoke.mjs
       - name: Probar el escáner con cámara simulada
         run: node tests/scanner.mjs
+      - name: Probar el cobro con Mercado Pago (simulado)
+        run: node tests/mp.test.mjs

@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="styles.css?v=8">
+<link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
 
@@ -116,6 +116,14 @@
     <label for="adminNote">Para quién es <span class="opt">(opcional)</span></label>
     <div class="row" style="flex-wrap:nowrap"><input id="adminNote" placeholder="Ej: Dietética Sol" autocomplete="off"><button type="button" id="adminNew" class="chip camb">Crear código</button></div>
     <div id="adminCodes" class="list-edit"></div>
+    <label>Precios por mes</label>
+    <div class="row" style="flex-wrap:nowrap;align-items:flex-end">
+      <div style="flex:1"><div class="mu">Primeros</div><input id="admSlots" type="number" inputmode="numeric"></div>
+      <div style="flex:1.4"><div class="mu">Precio de ellos</div><input id="admFounder" type="number" inputmode="numeric"></div>
+      <div style="flex:1.4"><div class="mu">Después</div><input id="admRegular" type="number" inputmode="numeric"></div>
+    </div>
+    <button type="button" class="btn sm" id="admPrecios" style="width:auto">Guardar precios</button>
+    <div class="mu">Cada negocio conserva el precio con el que se suscribió.</div>
     <label>Negocios</label>
     <div id="adminBiz" class="list-edit"></div>
   </div>
@@ -124,6 +132,17 @@
     <label for="cbiz">Nombre</label>
     <input id="cbiz" autocomplete="off">
     <button class="btn sm" id="cbizSave">Guardar</button>
+  </div>
+  <div class="card owner-only" id="planCard">
+    <h2 class="card-title">Mi plan</h2>
+    <div class="plan-estado" id="planEstado"></div>
+    <div class="mu" id="planDetalle"></div>
+    <div id="planSuscribir">
+      <label for="planEmail">Email de tu cuenta de Mercado Pago <span class="opt">(si no es el mismo con el que entrás acá)</span></label>
+      <input id="planEmail" type="email" inputmode="email" autocomplete="email" placeholder="tu@email.com">
+      <button class="btn" id="planBtn">Suscribirme con Mercado Pago</button>
+    </div>
+    <button type="button" class="btn sm danger-ghost" id="planCancel" style="width:auto" hidden>Cancelar suscripción</button>
   </div>
   <div class="card">
     <h2 class="card-title">Ticket</h2>
@@ -220,6 +239,7 @@
       <div class="tot vuelto"><span class="mu" id="vl">Vuelto</span><span class="big" id="vv">$0</span></div>
     </div>
     <div class="cobro"><span class="lbl">Total</span><span class="big" id="totv">$0</span></div>
+    <div class="note" id="bloqueo" hidden></div>
     <button class="btn" id="enviar">Anotar venta</button>
     <div class="ok" id="msg"></div>
     <div class="row">
@@ -328,6 +348,6 @@
 </div>
 
 <div id="ticket"></div>
-<script type="module" src="js/app.js?v=8"></script>
+<script type="module" src="js/app.js?v=9"></script>
 </body>
 </html>

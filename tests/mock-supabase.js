@@ -2,7 +2,7 @@
 // No aplica permisos: eso se prueba aparte en supabase/tests.
 (() => {
   const uuid = () => crypto.randomUUID();
-  const db = { businesses: [], members: [], shops: [], payment_methods: [], clients: [], providers: [], products: [], sales: [], expenses: [], openings: [], invites: [], platform_admins: [],
+  const db = { businesses: [], members: [], shops: [], payment_methods: [], clients: [], providers: [], products: [], sales: [], expenses: [], openings: [], invites: [], platform_admins: [], platform_settings: [{ id: 1, founder_price: 15000, regular_price: 18000, founder_slots: 10 }], fn_calls: [],
     signup_codes: [{ code: "PRUEBA01", note: "", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 30 * 864e5).toISOString(), used_by: null }] };
   let session = null; const listeners = [];
   const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") };
@@ -48,6 +48,8 @@
     rpc: async (name, a) => {
       const uid = session.user.id;
       const admin = db.platform_admins.some(a => a.user_id === uid);
+      if (name === "subscription_price") { const b = db.businesses.find(x => x.id === a.b); const s = db.platform_settings[0]; return { data: (b && b.price) || (db.businesses.filter(x => x.price).length < s.founder_slots ? s.founder_price : s.regular_price), error: null } }
+      if (name === "admin_set_free") { const b = db.businesses.find(x => x.id === a.p_business); if (!admin) return { data: null, error: { message: "not_allowed" } }; b.plan = a.p_free ? "free" : "trial"; return { data: null, error: null } }
       if (name === "is_platform_admin") return { data: admin, error: null };
       if (name === "admin_user_count") return { data: admin ? new Set(db.members.map(m => m.user_id)).size : null, error: null };
       if (name === "admin_overview") return { data: admin ? db.businesses.map(b => ({ business_id: b.id, name: b.name, created_at: b.created_at, plan: b.plan, trial_ends_at: b.trial_ends_at, owner_email: b.created_by.replace(/^u-/, ""), members: db.members.filter(m => m.business_id === b.id).length, sales_30d: db.sales.filter(s => s.business_id === b.id).length })) : [], error: null };
@@ -77,6 +79,7 @@
       signOut: async () => { session = null; emit("SIGNED_OUT"); return { error: null } },
       resetPasswordForEmail: async () => ({ error: null }), updateUser: async () => ({ error: null })
     },
+    functions: { invoke: async (name, { body }) => { db.fn_calls.push({ name, body }); return body.action === "cancelar" ? { data: { ok: true }, error: null } : { data: { init_point: "javascript:void(0)" }, error: null } } },
     channel: () => ({ on() { return this }, subscribe() { return this } })
   };
 })();
