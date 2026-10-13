@@ -172,7 +172,7 @@ $("saddShop").onclick = () => { shopInput(); $("sshops").lastChild.querySelector
 $("spayAdd").onclick = () => { const v = $("spayNew").value.trim(); if (!v) return; if (!sPayAll.includes(v)) sPayAll.push(v); if (!sPays.includes(v)) sPays.push(v); $("spayNew").value = ""; renderSPays() };
 $("spayNew").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); $("spayAdd").click() } };
 // Links de contacto para pedir un código de alta (se configuran en js/config.js)
-const msgContacto = "Hola, quiero usar la caja en mi negocio. ¿Me pasan un código de alta?";
+const msgContacto = "Hola, quiero usar Kovo en mi negocio. ¿Me pasan un código de alta?";
 const urlContacto = CONTACTO_WHATSAPP ? "https://wa.me/" + CONTACTO_WHATSAPP.replace(/\D/g, "") + "?text=" + encodeURIComponent(msgContacto)
   : CONTACTO_EMAIL ? "mailto:" + CONTACTO_EMAIL + "?subject=" + encodeURIComponent("Código de alta") + "&body=" + encodeURIComponent(msgContacto) : "";
 document.querySelectorAll("a.contacto").forEach(a => { if (urlContacto) a.href = urlContacto; else a.replaceWith(a.textContent) });
