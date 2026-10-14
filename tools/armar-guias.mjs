@@ -11,11 +11,11 @@ const URL = "https://kovoapp.github.io/";
 const GUIAS = [
   {
     slug: "crear-tu-negocio", titulo: "Cómo crear tu negocio en Kovo", corto: "Crear tu negocio",
-    desc: "Creá tu cuenta, cargá el código de alta y dejá listo tu negocio con sus locales y medios de pago en un minuto.",
-    intro: "Para empezar necesitás un email, una contraseña y el código de alta que te pasamos por WhatsApp. Lo demás se puede cambiar después desde Ajustes.",
+    desc: "Creá tu cuenta y dejá listo tu negocio con sus locales y medios de pago en un minuto.",
+    intro: "Para empezar solo necesitás un email y una contraseña. Lo demás se puede cambiar después desde Ajustes.",
     pasos: [
       ["Creá tu cuenta", "Entrá a kovoapp.github.io/app, tocá Crear cuenta y poné tu email y una contraseña de al menos 8 caracteres. Con esa cuenta entrás desde cualquier celular o computadora.", "cuenta", "Pantalla de Kovo para crear la cuenta con email y contraseña"],
-      ["Cargá el código de alta y los datos del negocio", "Escribí el código de alta, el nombre del negocio y tu nombre. Si tenés más de un local, agregalos: cada uno tiene su propia caja. Marcá los medios de pago que aceptás y tocá Crear mi negocio.", "alta", "Formulario de alta del negocio con código, nombre, locales y medios de pago"],
+      ["Cargá los datos del negocio", "Escribí el nombre del negocio y tu nombre. Si tenés más de un local, agregalos: cada uno tiene su propia caja. Marcá los medios de pago que aceptás y tocá Crear mi negocio.", "alta", "Formulario de alta del negocio con nombre, locales y medios de pago"],
       ["Listo, ya podés vender", "Arrancás con 7 días de prueba gratis. El siguiente paso es cargar tus productos, aunque también podés anotar ventas poniendo solo el monto.", null, ""],
     ],
   },
@@ -124,10 +124,10 @@ function marco({ titulo, desc, url, img, ld, pre, cuerpo }) {
 ${cuerpo}
   <section class="final">
     <h2>¿Querés probarlo?</h2>
-    <p class="mu">Mirá la demo con datos de ejemplo, o pedí tus 7 días gratis.</p>
+    <p class="mu">Mirá la demo con datos de ejemplo, o creá tu cuenta y probalo 7 días gratis.</p>
     <div class="ctas" style="justify-content:center">
       <a class="btn pri" href="${pre}app/?demo">Ver la demo</a>
-      <a class="btn sec wa" href="#" target="_blank" rel="noopener">Pedir la prueba por WhatsApp</a>
+      <a class="btn sec" href="${pre}app/?registro">Probá 7 días gratis</a>
     </div>
   </section>
 </main>
@@ -141,7 +141,7 @@ ${cuerpo}
 </footer>
 
 <script>
-  const msg = "Hola, estuve viendo las guías de Kovo y quiero probarlo. ¿Me pasan un código de alta?";
+  const msg = "Hola, estuve viendo las guías de Kovo y tengo una consulta.";
   document.querySelectorAll("a.wa").forEach(a => a.href = "https://wa.me/${TEL}?text=" + encodeURIComponent(msg));
   const h = document.getElementById("top");
   addEventListener("scroll", () => h.classList.toggle("sombra", scrollY > 8), { passive: true });

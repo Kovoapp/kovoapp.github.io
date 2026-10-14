@@ -51,12 +51,15 @@ declare
   sc text;
 begin
   if auth.uid() is null then raise exception 'not_signed_in'; end if;
-  -- Solo se crea un negocio con un código de alta (los administradores de la plataforma no lo necesitan).
-  if not public.is_platform_admin() then
+  -- El código de alta es opcional: sin código, cada cuenta crea un solo negocio (ver registro.sql).
+  if btrim(coalesce(p_code, '')) <> '' then
     select code into sc from signup_codes
-      where code = upper(btrim(coalesce(p_code, ''))) and used_by is null and expires_at > now()
+      where code = upper(btrim(p_code)) and used_by is null and expires_at > now()
       for update;
     if not found then raise exception 'invalid_signup_code'; end if;
+  elsif not public.is_platform_admin()
+        and exists (select 1 from members where user_id = auth.uid() and role = 'owner') then
+    raise exception 'already_owner';
   end if;
   if coalesce(array_length(p_shops, 1), 0) = 0 then raise exception 'need_shop'; end if;
   if coalesce(array_length(p_payments, 1), 0) = 0 then raise exception 'need_payment'; end if;

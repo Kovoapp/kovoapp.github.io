@@ -30,7 +30,7 @@ const snap = async n => { if (shots) await page.screenshot({ path: `${shots}/${n
 await page.goto(base + "?demo=kiosco");
 await page.waitForSelector("#screen-app:not([hidden])");
 check((await page.textContent("#bizName")) === "Kiosco La Parada", "abre directo en la caja del negocio de ejemplo, sin cuenta");
-check((await page.textContent(".demo-aviso")).includes("demo con datos de ejemplo") && (await page.getAttribute(".demo-aviso a", "href")).startsWith("https://wa.me/"), "avisa que es una demo y ofrece pedir la prueba por WhatsApp");
+check((await page.textContent(".demo-aviso")).includes("demo con datos de ejemplo") && (await page.getAttribute(".demo-aviso a", "href")) === "./?registro", "avisa que es una demo y lleva a crear la cuenta");
 check(!(await page.isHidden("#stockAviso")), "muestra el aviso de stock bajo");
 await snap("demo-vender");
 

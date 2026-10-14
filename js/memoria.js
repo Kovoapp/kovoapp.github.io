@@ -2,7 +2,7 @@
 // No aplica permisos: eso se prueba aparte en supabase/tests.
 window.crearMemoria = (opciones = {}) => {
   const uuid = () => crypto.randomUUID();
-  const db = { businesses: [], members: [], shops: [], payment_methods: [], clients: [], providers: [], products: [], sales: [], expenses: [], openings: [], invites: [], product_costs: [], sale_costs: [], suggestions: [], platform_admins: [], platform_settings: [{ id: 1, founder_price: 15000, regular_price: 18000, founder_slots: 10 }], fn_calls: [],
+  const db = { businesses: [], members: [], shops: [], payment_methods: [], clients: [], providers: [], products: [], sales: [], expenses: [], openings: [], invites: [], product_costs: [], sale_costs: [], fiados: [], suggestions: [], platform_admins: [], platform_settings: [{ id: 1, founder_price: 15000, regular_price: 18000, founder_slots: 10 }], fn_calls: [],
     signup_codes: [{ code: "PRUEBA01", note: "", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 30 * 864e5).toISOString(), used_by: null }] };
   let session = opciones.session || null; const listeners = [];
   const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") };
@@ -14,6 +14,7 @@ window.crearMemoria = (opciones = {}) => {
     sales: () => ({ id: uuid(), day: today(), created_at: new Date().toISOString(), client_name: "", paid_with: 0, items: [], created_by: session && session.user.id }),
     expenses: () => ({ id: uuid(), day: today(), created_at: new Date().toISOString(), name: "", payment: "" }),
     openings: () => ({}), product_costs: () => ({}), sale_costs: () => ({}),
+    fiados: () => ({ id: uuid(), kind: "pago", day: today(), created_at: new Date().toISOString(), created_by: session && session.user.id }),
     suggestions: () => ({ id: uuid(), created_at: new Date().toISOString(), done: false, user_id: session && session.user.id }), members: () => ({ created_at: new Date().toISOString(), display_name: "" }),
     signup_codes: () => ({ code: Math.random().toString(16).slice(2, 10).toUpperCase(), note: "", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 30 * 864e5).toISOString(), used_by: null }),
     invites: () => ({ code: Math.random().toString(16).slice(2, 10).toUpperCase(), role: "cashier", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 7 * 864e5).toISOString(), used_by: null })
@@ -43,10 +44,20 @@ window.crearMemoria = (opciones = {}) => {
           (s.items || []).forEach(i => { const p = db.products.find(x => x.id === i.id), c = db.product_costs.find(x => x.product_id === i.id); if (!p || !c) return; const k = p.unit === "kg" ? 1000 : 1; base += i.qty * i.price / k; cost += i.qty * c.cost / k; n++ });
           if (n) db.sale_costs.push({ sale_id: s.id, business_id: s.business_id, day: s.day, base, cost });
         });
+        // Igual que el disparador sales_fiado: una venta fiada se anota en la cuenta del cliente (y lo crea si es nuevo).
+        if (this.t === "sales") for (const s of rows) {
+          if (s.payment !== "Fiado") continue;
+          const nom = String(s.client_name || "").trim();
+          if (!nom) { T.splice(T.indexOf(s), 1); return { data: null, error: { message: "fiado_sin_cliente" } } }
+          let c = db.clients.find(x => x.business_id === s.business_id && x.name === nom);
+          if (!c) { c = { ...defaults.clients(), business_id: s.business_id, name: nom }; db.clients.push(c) }
+          db.fiados.push({ ...defaults.fiados(), business_id: s.business_id, client_id: c.id, sale_id: s.id, kind: "fiado", amount: s.amount, payment: null, shop_id: s.shop_id, day: s.day, created_at: s.created_at, created_by: s.created_by });
+        }
       }
       else if (this.op === "update") { out = T.filter(m); out.forEach(r => Object.assign(r, this.payload)) }
       else if (this.op === "upsert") { const o = this.payload, ex = T.find(r => this.conf.every(c => r[c] === o[c])); if (ex) Object.assign(ex, o); else T.push({ ...defaults[this.t](), ...o }); out = [ex || T[T.length - 1]] }
-      else if (this.op === "delete") { out = T.filter(m); db[this.t] = T.filter(r => !m(r)); return { data: null, error: null, count: out.length } }
+      else if (this.op === "delete") { out = T.filter(m); db[this.t] = T.filter(r => !m(r));
+        if (this.t === "sales") db.fiados = db.fiados.filter(f => !out.some(s => s.id === f.sale_id)); return { data: null, error: null, count: out.length } }
       else { out = T.filter(m).map(r => ({ ...r })); if (this.ord) { const [c, asc] = this.ord; out.sort((a, b) => (a[c] > b[c] ? 1 : a[c] < b[c] ? -1 : 0) * (asc ? 1 : -1)) } if (this.lim) out = out.slice(0, this.lim) }
       out = JSON.parse(JSON.stringify(out));
       return { data: this.one ? out[0] || null : out, error: null };
@@ -84,8 +95,9 @@ window.crearMemoria = (opciones = {}) => {
       if (name === "admin_user_count") return { data: admin ? new Set(db.members.map(m => m.user_id)).size : null, error: null };
       if (name === "admin_overview") return { data: admin ? db.businesses.map(b => ({ business_id: b.id, name: b.name, created_at: b.created_at, plan: b.plan, trial_ends_at: b.trial_ends_at, owner_email: b.created_by.replace(/^u-/, ""), members: db.members.filter(m => m.business_id === b.id).length, sales_30d: db.sales.filter(s => s.business_id === b.id).length, price: b.price || null, paid_until: b.paid_until || null })) : [], error: null };
       if (name === "create_business") {
-        const sc = db.signup_codes.find(c => c.code === String(a.p_code || "").trim().toUpperCase() && !c.used_by);
-        if (!sc && !admin) return { data: null, error: { message: "invalid_signup_code" } };
+        const cod = String(a.p_code || "").trim().toUpperCase(), sc = cod && db.signup_codes.find(c => c.code === cod && !c.used_by);
+        if (cod && !sc) return { data: null, error: { message: "invalid_signup_code" } };
+        if (!cod && !admin && db.members.some(m => m.user_id === uid && m.role === "owner")) return { data: null, error: { message: "already_owner" } };
         const b = { ...defaults.businesses(), name: a.p_name, created_by: uid }; db.businesses.push(b);
         db.members.push({ ...defaults.members(), business_id: b.id, user_id: uid, role: "owner", display_name: a.p_owner_name });
         a.p_shops.forEach((s, i) => db.shops.push({ ...defaults.shops(), business_id: b.id, name: s, position: i + 1 }));

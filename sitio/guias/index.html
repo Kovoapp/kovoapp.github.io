@@ -35,7 +35,7 @@
     <h1>Guías de Kovo</h1>
     <p class="intro">Paso a paso y con capturas, para arrancar o para mostrarle a tu empleado. Si te queda alguna duda, escribinos por WhatsApp.</p>
     <div class="glista">
-      <a class="gcard" href="crear-tu-negocio/"><img src="../img/guias/cuenta.jpg" alt="" loading="lazy"><span class="gn">1</span><b>Crear tu negocio</b><span>Creá tu cuenta, cargá el código de alta y dejá listo tu negocio con sus locales y medios de pago en un minuto.</span></a>
+      <a class="gcard" href="crear-tu-negocio/"><img src="../img/guias/cuenta.jpg" alt="" loading="lazy"><span class="gn">1</span><b>Crear tu negocio</b><span>Creá tu cuenta y dejá listo tu negocio con sus locales y medios de pago en un minuto.</span></a>
       <a class="gcard" href="cargar-productos/"><img src="../img/guias/producto-nuevo.jpg" alt="" loading="lazy"><span class="gn">2</span><b>Cargar productos</b><span>Cargá productos uno por uno o desde una planilla de Excel, con precio por unidad o por kilo, costo, código de barras y stock.</span></a>
       <a class="gcard" href="vender/"><img src="../img/guias/carrito.jpg" alt="" loading="lazy"><span class="gn">3</span><b>Vender</b><span>Buscá o escaneá los productos, cobrá con el medio de pago que corresponda, mirá el vuelto e imprimí el ticket.</span></a>
       <a class="gcard" href="cierre-de-caja/"><img src="../img/guias/caja-inicial.jpg" alt="" loading="lazy"><span class="gn">4</span><b>Caja inicial y cierre</b><span>Anotá con cuánto abre la caja, los retiros del día, y al cerrar mirá cuánto efectivo tiene que haber y qué fue lo más vendido.</span></a>
@@ -47,10 +47,10 @@
 
   <section class="final">
     <h2>¿Querés probarlo?</h2>
-    <p class="mu">Mirá la demo con datos de ejemplo, o pedí tus 7 días gratis.</p>
+    <p class="mu">Mirá la demo con datos de ejemplo, o creá tu cuenta y probalo 7 días gratis.</p>
     <div class="ctas" style="justify-content:center">
       <a class="btn pri" href="../app/?demo">Ver la demo</a>
-      <a class="btn sec wa" href="#" target="_blank" rel="noopener">Pedir la prueba por WhatsApp</a>
+      <a class="btn sec" href="../app/?registro">Probá 7 días gratis</a>
     </div>
   </section>
 </main>
@@ -64,7 +64,7 @@
 </footer>
 
 <script>
-  const msg = "Hola, estuve viendo las guías de Kovo y quiero probarlo. ¿Me pasan un código de alta?";
+  const msg = "Hola, estuve viendo las guías de Kovo y tengo una consulta.";
   document.querySelectorAll("a.wa").forEach(a => a.href = "https://wa.me/5493329593188?text=" + encodeURIComponent(msg));
   const h = document.getElementById("top");
   addEventListener("scroll", () => h.classList.toggle("sombra", scrollY > 8), { passive: true });

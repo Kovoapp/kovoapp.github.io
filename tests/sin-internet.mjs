@@ -49,7 +49,7 @@ await page.fill("#aemail", "eva@almacen.com"); await page.fill("#apass", "clave1
 await page.click("#authBtn");
 await page.waitForSelector("#screen-setup:not([hidden])");
 await page.fill("#sname", "Almacén Eva"); await page.fill("#sowner", "Eva");
-await page.fill("#sshops input", "Centro"); await page.fill("#scodigo", "PRUEBA01");
+await page.fill("#sshops input", "Centro");
 await page.click("#screate");
 await page.waitForSelector("#screen-app:not([hidden])");
 await page.click("#cfg");

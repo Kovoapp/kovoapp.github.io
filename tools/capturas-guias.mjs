@@ -56,7 +56,7 @@ const ajustes = async page => { await page.click("#cfg"); await page.waitForSele
   await foto(page, "#screen-auth .card", "cuenta");
   await page.click("#authBtn");
   await page.waitForSelector("#screen-setup:not([hidden])");
-  await page.fill("#scodigo", "7F3A9C21"); await page.fill("#sname", "Almacén La Esquina"); await page.fill("#sowner", "Ana"); await page.fill("#sshops input", "Local");
+  await page.fill("#sname", "Almacén La Esquina"); await page.fill("#sowner", "Ana"); await page.fill("#sshops input", "Local");
   await foto(page, "#screen-setup .card", "alta");
   await page.close();
 }

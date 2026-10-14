@@ -48,3 +48,5 @@ jobs:
         run: node tests/demo.mjs
       - name: Probar vender sin internet
         run: node tests/sin-internet.mjs
+      - name: Probar el fiado
+        run: node tests/fiado.mjs
