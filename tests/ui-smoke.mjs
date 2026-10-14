@@ -96,6 +96,7 @@ for (const [w, h, scheme] of [[390, 844, "light"], [1100, 900, "dark"]]) {
   await page.click("#cfg"); await page.click("#cfgBack");
   check(await page.isHidden("#cfgbox"), "la flecha de Ajustes vuelve a la caja");
   check(await page.isHidden("#adm"), "un negocio común no ve el botón del panel de administración");
+  check(await page.isHidden("#vistaCard"), "un negocio común no ve la opción de ver la app como cajero");
   // El dueño de la app tiene su panel en una pantalla aparte
   await page.evaluate(() => window.__SB__.__db.platform_admins.push({ user_id: "u-ana@dietetica.com" }));
   await page.click("#cfg"); await page.click("#cbizSave");

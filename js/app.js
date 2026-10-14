@@ -32,6 +32,11 @@ function errMsg(e) {
   if (/already registered|already exists/i.test(m)) return "Ya hay una cuenta con ese email. Probá con Entrar.";
   if (/password should be at least|weak/i.test(m)) return "La contraseña tiene que tener al menos 8 caracteres.";
   if (/email not confirmed/i.test(m)) return "Confirmá tu email: te mandamos un link a tu casilla.";
+  if (/email rate limit|over_email_send_rate_limit/i.test(m)) return "Se mandaron demasiados emails de confirmación en poco tiempo. Probá de nuevo en una hora.";
+  if (/only request this after|over_request_rate_limit|too many requests|429/i.test(m)) return "Demasiados intentos seguidos. Esperá un minuto y probá de nuevo.";
+  if (/error sending .*email|smtp/i.test(m)) return "No pudimos mandarte el email de confirmación. Escribinos y lo resolvemos.";
+  if (/signups? not allowed|signup.*disabled/i.test(m)) return "Por ahora no se pueden crear cuentas nuevas. Escribinos.";
+  if (/email address .* is invalid|email_address_invalid/i.test(m)) return "Ese email no es válido. Revisalo y probá de nuevo.";
   if (/invalid_signup_code/.test(m)) return "Ese código de alta no existe, ya se usó o venció. Si no tenés uno, dejalo vacío.";
   if (/already_owner/.test(m)) return "Tu cuenta ya tiene un negocio. Para crear otro, escribinos y te pasamos un código.";
   if (/fiado_sin_cliente/.test(m)) return "Para fiar, escribí el nombre del cliente.";
@@ -39,7 +44,8 @@ function errMsg(e) {
   if (/fiado/.test(m) && /column|schema cache|PGRST204|does not exist/i.test(m)) return "Falta actualizar la base de datos para usar el fiado (supabase/fiado.sql).";
   if (/invalid_invite/.test(m)) return "Ese código no existe, ya se usó o venció. Pedí uno nuevo.";
   if (/duplicate key|unique/i.test(m)) return "Ya existe uno con ese nombre o código.";
-  return "Algo salió mal. Probá de nuevo en un momento.";
+  // Lo que no reconocemos va con el detalle, para poder saber qué pasó.
+  return "Algo salió mal. Probá de nuevo en un momento." + (m && m.length < 160 ? " (detalle: " + m + ")" : "");
 }
 function say(id, text, isErr) { const el = $(id); el.classList.toggle("err", !!isErr); el.textContent = text; if (!isErr && text) setTimeout(() => { if (el.textContent === text) el.textContent = "" }, 2500) }
 function toast(text) { const t = document.createElement("div"); t.className = "toast"; t.textContent = text; document.body.appendChild(t); setTimeout(() => t.remove(), 2600) }
@@ -367,7 +373,7 @@ async function loadRefs(b) {
     q("fiados").order("created_at", { ascending: false })
   ]);
   if (bz.error && sinRed(bz.error) && cajaGuardada(b)) return;
-  $("adm").hidden = !(adm && adm.data);
+  esAdminApp = !!(adm && adm.data); $("adm").hidden = !esAdminApp;
   biz = bz.data; shops = sh.data || []; pays = pm.data || []; clientes = cl.data || []; provs = pv.data || []; catalog = pr.data || []; members = mb.data || [];
   fiados = (fd && !fd.error && fd.data) || [];
   costs = {}; (pc.data || []).forEach(c => costs[c.product_id] = num(c.cost));
@@ -1284,7 +1290,7 @@ async function leerImport(file) {
   const box = $("pimpRes"); box.textContent = "Leyendo " + file.name + "…"; importar = null;
   let res;
   try {
-    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=22");
+    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=23");
     res = armarProductos(await leerPlanilla(file));
   } catch (e) {
     box.innerHTML = ""; const d = document.createElement("div"); d.className = "imp-err";
@@ -1445,8 +1451,8 @@ function mostrarPantalla(cual) {
 function abrir(cual) { if (history.state && history.state.pantalla) history.replaceState({ pantalla: cual }, ""); else history.pushState({ pantalla: cual }, ""); mostrarPantalla(cual) }
 function cerrar() { if (history.state && history.state.pantalla) history.back(); else mostrarPantalla(null) }
 
-// Ver la app como cajero: el dueño o un administrador ve lo mismo que sus cajeros.
-let realRole = null;
+// Ver la app como cajero: solo para el administrador de Kovo, para revisar lo que ven los cajeros.
+let realRole = null, esAdminApp = false;
 async function verComo(r) {
   role = r; mostrarPantalla(null);
   if (history.state && history.state.pantalla) history.replaceState(null, "");
@@ -1454,7 +1460,7 @@ async function verComo(r) {
   toast(r === "cashier" ? "Ahora ves Kovo como un cajero" : "Volviste a ver Kovo como " + (realRole === "owner" ? "dueño" : "administrador"));
 }
 function pintaVista() {
-  const puede = realRole === "owner" || realRole === "admin", yo = realRole === "owner" ? "Dueño" : "Administrador";
+  const puede = esAdminApp && (realRole === "owner" || realRole === "admin"), yo = realRole === "owner" ? "Dueño" : "Administrador";
   $("vistaCard").hidden = !puede; $("vistaBanner").hidden = !puede || role === realRole;
   $("vistaVolver").textContent = "Volver a ver como " + yo.toLowerCase();
   if (puede) chips($("vistaChips"), [realRole, "cashier"], () => role, v => { if (v !== role) verComo(v) }, v => v === "cashier" ? "Cajero" : yo);
