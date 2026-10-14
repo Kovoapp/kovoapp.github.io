@@ -44,3 +44,5 @@ jobs:
         run: node tests/scanner.mjs
       - name: Probar el cobro con Mercado Pago (simulado)
         run: node tests/mp.test.mjs
+      - name: Probar la demo con datos de ejemplo
+        run: node tests/demo.mjs

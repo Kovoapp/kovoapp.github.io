@@ -17,7 +17,7 @@ const server = createServer(async (req, res) => {
   catch { res.writeHead(404); res.end() }
 }).listen(0);
 const base = `http://localhost:${server.address().port}/`;
-const mock = await readFile(join(root, "tests/mock-supabase.js"), "utf8");
+const mock = (await readFile(join(root, "js/memoria.js"), "utf8")) + "\nwindow.__SB__ = crearMemoria();";
 
 const fails = [];
 const check = (ok, msg) => { console.log((ok ? "ok   " : "FAIL ") + msg); if (!ok) fails.push(msg) };
