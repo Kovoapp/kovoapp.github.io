@@ -32,6 +32,11 @@ function errMsg(e) {
   if (/already registered|already exists/i.test(m)) return "Ya hay una cuenta con ese email. Probá con Entrar.";
   if (/password should be at least|weak/i.test(m)) return "La contraseña tiene que tener al menos 8 caracteres.";
   if (/email not confirmed/i.test(m)) return "Confirmá tu email: te mandamos un link a tu casilla.";
+  if (/email rate limit|over_email_send_rate_limit/i.test(m)) return "Se mandaron demasiados emails de confirmación en poco tiempo. Probá de nuevo en una hora.";
+  if (/only request this after|over_request_rate_limit|too many requests|429/i.test(m)) return "Demasiados intentos seguidos. Esperá un minuto y probá de nuevo.";
+  if (/error sending .*email|smtp/i.test(m)) return "No pudimos mandarte el email de confirmación. Escribinos y lo resolvemos.";
+  if (/signups? not allowed|signup.*disabled/i.test(m)) return "Por ahora no se pueden crear cuentas nuevas. Escribinos.";
+  if (/email address .* is invalid|email_address_invalid/i.test(m)) return "Ese email no es válido. Revisalo y probá de nuevo.";
   if (/invalid_signup_code/.test(m)) return "Ese código de alta no existe, ya se usó o venció. Si no tenés uno, dejalo vacío.";
   if (/already_owner/.test(m)) return "Tu cuenta ya tiene un negocio. Para crear otro, escribinos y te pasamos un código.";
   if (/fiado_sin_cliente/.test(m)) return "Para fiar, escribí el nombre del cliente.";
@@ -39,7 +44,8 @@ function errMsg(e) {
   if (/fiado/.test(m) && /column|schema cache|PGRST204|does not exist/i.test(m)) return "Falta actualizar la base de datos para usar el fiado (supabase/fiado.sql).";
   if (/invalid_invite/.test(m)) return "Ese código no existe, ya se usó o venció. Pedí uno nuevo.";
   if (/duplicate key|unique/i.test(m)) return "Ya existe uno con ese nombre o código.";
-  return "Algo salió mal. Probá de nuevo en un momento.";
+  // Lo que no reconocemos va con el detalle, para poder saber qué pasó.
+  return "Algo salió mal. Probá de nuevo en un momento." + (m && m.length < 160 ? " (detalle: " + m + ")" : "");
 }
 function say(id, text, isErr) { const el = $(id); el.classList.toggle("err", !!isErr); el.textContent = text; if (!isErr && text) setTimeout(() => { if (el.textContent === text) el.textContent = "" }, 2500) }
 function toast(text) { const t = document.createElement("div"); t.className = "toast"; t.textContent = text; document.body.appendChild(t); setTimeout(() => t.remove(), 2600) }
