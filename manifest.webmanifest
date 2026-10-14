@@ -1,7 +1,7 @@
 {
   "name": "Kovo",
   "short_name": "Kovo",
-  "description": "Caja registradora simple para dietéticas: ventas, caja diaria, proveedores y balance.",
+  "description": "Caja registradora simple para tu negocio: ventas, caja diaria, proveedores y balance.",
   "lang": "es-AR",
   "start_url": "./",
   "scope": "./",

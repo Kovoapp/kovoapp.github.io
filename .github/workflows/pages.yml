@@ -24,8 +24,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Armar el sitio
         run: |
-          mkdir _site
-          cp -r index.html styles.css sw.js manifest.webmanifest js icons vendor _site/
+          # La página de presentación va en la raíz y la caja en /app/.
+          mkdir -p _site/app
+          cp -r index.html styles.css sw.js manifest.webmanifest js icons vendor _site/app/
+          cp -r sitio/. _site/
+          cp -r icons _site/
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
