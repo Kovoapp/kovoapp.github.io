@@ -21,6 +21,7 @@ function falso({ rol = "owner", trial = Date.now() + 5 * 864e5, pre = {}, cuota 
     if (url.endsWith("/rpc/subscription_price")) return ok(15000);
     if (url.endsWith("/rpc/mp_attach") || url.endsWith("/rpc/mp_apply")) return ok(true);
     if (url === "https://api.mercadopago.com/preapproval") return ok({ id: "pre-1", init_point: "https://mp/checkout/pre-1", status: "pending" });
+    if (url.endsWith("/ajena")) return { ok: false, status: 401, text: async () => JSON.stringify({ message: "unauthorized" }) };
     if (url.endsWith("/123456")) return { ok: false, status: 404, text: async () => JSON.stringify({ message: "not found" }) };
     if (url.includes("/authorized_payments/")) return ok({ id: 77, preapproval_id: "pre-1", status: "scheduled", ...cuota });
     if (url.includes("/preapproval/") && opts.method === "PUT") return ok({ id: "pre-1", status: "authorized", ...(body.status ? { status: body.status } : {}) });
@@ -69,6 +70,9 @@ const llamado = (calls, fin) => calls.find(c => c.url.endsWith(fin));
   f = falso({ preId: "123456" });
   out = await crearSuscripcion({ env, fetch: f.fetch, authHeader: "Bearer buena", body: { business_id: "b1", action: "cancelar" } });
   check(out.status === 200 && !f.calls.some(c => c.method === "PUT") && llamado(f.calls, "/rpc/mp_apply").body.p_status === "cancelled", "si la suscripción no existe en esta cuenta (era de prueba), la da por cancelada");
+  f = falso({ preId: "ajena" });
+  out = await crearSuscripcion({ env, fetch: f.fetch, authHeader: "Bearer buena", body: { business_id: "b1", action: "cancelar" } });
+  check(out.status === 200 && !f.calls.some(c => c.method === "PUT") && llamado(f.calls, "/rpc/mp_apply").body.p_status === "cancelled", "y lo mismo si Mercado Pago dice que es de otra cuenta");
 }
 { // Revisar el estado sin esperar el aviso
   let f = falso();
