@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="styles.css?v=14">
+<link rel="stylesheet" href="styles.css?v=15">
 </head>
 <body>
 
@@ -124,6 +124,8 @@
     </div>
     <button type="button" class="btn sm" id="admPrecios" style="width:auto">Guardar precios</button>
     <div class="mu">Los primeros negocios que se suscriben pagan menos solo el primer mes. Después, todos pagan el precio normal.</div>
+    <label>Sugerencias</label>
+    <div id="adminSug" class="list-edit"></div>
     <label>Negocios</label>
     <div id="adminBiz" class="list-edit"></div>
   </div>
@@ -183,6 +185,8 @@
     <input id="pn" placeholder="Ej: Almendras peladas" autocomplete="off">
     <label for="pp">Precio ($)</label>
     <input id="pp" type="number" inputmode="decimal" placeholder="0">
+    <label for="pco">Costo ($) <span class="opt">(opcional: lo que te sale a vos, para ver cuánto ganás)</span></label>
+    <input id="pco" type="number" inputmode="decimal" placeholder="Vacío = sin costo">
     <label>Se vende por</label>
     <div class="row" id="pu"></div>
     <label for="pc">Código de barras <span class="opt">(opcional)</span></label>
@@ -191,9 +195,40 @@
     <input id="ps" type="number" inputmode="decimal" placeholder="Vacío = no controlar">
     <button class="btn" id="padd">Agregar producto</button>
     <div class="ok" id="pm2"></div>
-    <label for="pf">Lista de productos <span class="opt">(tocá el precio o el stock para cambiarlo)</span></label>
+    <div class="row" style="margin-top:18px">
+      <button type="button" class="chip camb" id="pimpBtn">Importar desde Excel</button>
+      <button type="button" class="chip camb" id="paumBtn">Aumentar precios</button>
+    </div>
+    <div class="panel" id="pimp" hidden>
+      <div class="mu">La planilla necesita una fila de títulos con <b>Nombre</b> y <b>Precio</b>. Puede tener también <b>Costo</b>, <b>Código</b>, <b>Stock</b> y <b>Unidad</b> (u o kg). Si un producto ya existe (mismo código o nombre), se actualiza.</div>
+      <input type="file" id="pimpFile" accept=".xlsx,.csv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" hidden>
+      <div class="row" style="margin-top:10px">
+        <button type="button" class="chip on" id="pimpPick">Elegir archivo</button>
+        <button type="button" class="chip camb" id="pimpModelo">Descargar planilla de ejemplo</button>
+      </div>
+      <div id="pimpRes"></div>
+    </div>
+    <div class="panel" id="paum" hidden>
+      <label for="aumPct" style="margin-top:0">Porcentaje de aumento</label>
+      <input id="aumPct" type="number" inputmode="decimal" placeholder="Ej: 10">
+      <label>Redondear el precio nuevo</label>
+      <div class="row" id="aumRed"></div>
+      <label class="row" style="align-items:center;gap:10px;font-weight:500;flex-wrap:nowrap">
+        <input id="aumCosto" type="checkbox" checked style="width:22px;min-height:22px;flex:0 0 auto"> Subir también el costo
+      </label>
+      <div class="mu" id="aumAlc"></div>
+      <button class="btn sm" id="aumOk">Aumentar precios</button>
+    </div>
+    <label for="pf">Lista de productos <span class="opt">(tocá el precio, el costo o el stock para cambiarlo)</span></label>
     <input id="pf" placeholder="Filtrar..." autocomplete="off">
     <div class="scroll"><table id="plist2" style="margin-top:10px"></table></div>
+  </div>
+  <div class="card">
+    <h2 class="card-title">Sugerencias</h2>
+    <div class="mu">¿Qué le falta a Kovo o qué cambiarías? Lo leemos todo.</div>
+    <textarea id="sugTxt" rows="3" maxlength="2000" placeholder="Ej: me gustaría poder..." aria-label="Tu sugerencia" style="margin-top:10px"></textarea>
+    <button class="btn sm" id="sugBtn">Enviar sugerencia</button>
+    <div class="ok" id="sugMsg"></div>
   </div>
   <div class="card">
     <h2 class="card-title">Tu cuenta</h2>
@@ -339,6 +374,10 @@
       <button type="button" class="btn sm" id="bdl2">Copia de seguridad del mes</button>
     </div>
   </div>
+  <div class="card">
+    <h2 class="sect">Ganancia del mes</h2>
+    <div id="bgan"></div>
+  </div>
   <div class="card" id="bclicard">
     <h2 class="sect">Mayorista por cliente</h2>
     <div class="scroll"><table id="bcli"></table></div>
@@ -348,6 +387,6 @@
 </div>
 
 <div id="ticket"></div>
-<script type="module" src="js/app.js?v=14"></script>
+<script type="module" src="js/app.js?v=15"></script>
 </body>
 </html>

@@ -178,3 +178,14 @@ a{color:var(--ac)}
 .scan-msg{color:#fff;font-weight:600;font-size:17px;text-align:center}
 .stats{font-family:var(--f-num);font-size:17px;font-weight:700;margin:10px 0 2px}
 .plan-estado{font-family:var(--f-num);font-size:18px;font-weight:700;margin:6px 0 2px}
+
+/* Paneles dentro de una tarjeta (importar, aumentar precios) */
+.panel{border:1px solid var(--bd);border-radius:14px;padding:14px;margin-top:10px;background:var(--bg)}
+.panel input{background:var(--card)}
+textarea{width:100%;font-family:inherit;font-size:17px;padding:12px 14px;border-radius:12px;border:1px solid var(--bd2);background:var(--bg);color:var(--tx);resize:vertical;min-height:90px}
+textarea:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px var(--ac3)}
+.costo{display:block;white-space:normal;font-size:13px;color:var(--mu);font-weight:500;cursor:pointer}
+.imp-err{color:var(--rd);font-size:14px;margin-top:6px}
+.gan{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-variant-numeric:tabular-nums}
+.gan .n{text-align:right}
+.gan .gtot{font-weight:700;font-size:18px;border-top:1px solid var(--bd);padding-top:8px}

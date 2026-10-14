@@ -2,7 +2,7 @@
 // No aplica permisos: eso se prueba aparte en supabase/tests.
 (() => {
   const uuid = () => crypto.randomUUID();
-  const db = { businesses: [], members: [], shops: [], payment_methods: [], clients: [], providers: [], products: [], sales: [], expenses: [], openings: [], invites: [], platform_admins: [], platform_settings: [{ id: 1, founder_price: 15000, regular_price: 18000, founder_slots: 10 }], fn_calls: [],
+  const db = { businesses: [], members: [], shops: [], payment_methods: [], clients: [], providers: [], products: [], sales: [], expenses: [], openings: [], invites: [], product_costs: [], sale_costs: [], suggestions: [], platform_admins: [], platform_settings: [{ id: 1, founder_price: 15000, regular_price: 18000, founder_slots: 10 }], fn_calls: [],
     signup_codes: [{ code: "PRUEBA01", note: "", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 30 * 864e5).toISOString(), used_by: null }] };
   let session = null; const listeners = [];
   const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") };
@@ -13,7 +13,8 @@
     clients: () => ({ id: uuid() }), providers: () => ({ id: uuid() }), products: () => ({ id: uuid(), code: "" }),
     sales: () => ({ id: uuid(), day: today(), created_at: new Date().toISOString(), client_name: "", paid_with: 0, items: [], created_by: session && session.user.id }),
     expenses: () => ({ id: uuid(), day: today(), created_at: new Date().toISOString(), name: "", payment: "" }),
-    openings: () => ({}), members: () => ({ created_at: new Date().toISOString(), display_name: "" }),
+    openings: () => ({}), product_costs: () => ({}), sale_costs: () => ({}),
+    suggestions: () => ({ id: uuid(), created_at: new Date().toISOString(), done: false, user_id: session && session.user.id }), members: () => ({ created_at: new Date().toISOString(), display_name: "" }),
     signup_codes: () => ({ code: Math.random().toString(16).slice(2, 10).toUpperCase(), note: "", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 30 * 864e5).toISOString(), used_by: null }),
     invites: () => ({ code: Math.random().toString(16).slice(2, 10).toUpperCase(), role: "cashier", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 7 * 864e5).toISOString(), used_by: null })
   };
@@ -31,7 +32,15 @@
     run() {
       const T = db[this.t], m = r => this.f.every(f => f(r));
       let out;
-      if (this.op === "insert") { const rows = [].concat(this.payload).map(o => ({ ...defaults[this.t](), ...o })); T.push(...rows); out = rows }
+      if (this.op === "insert") {
+        const rows = [].concat(this.payload).map(o => ({ ...defaults[this.t](), ...o })); T.push(...rows); out = rows;
+        // Igual que el disparador sales_cost: guarda el costo de lo vendido.
+        if (this.t === "sales") rows.forEach(s => {
+          let base = 0, cost = 0, n = 0;
+          (s.items || []).forEach(i => { const p = db.products.find(x => x.id === i.id), c = db.product_costs.find(x => x.product_id === i.id); if (!p || !c) return; const k = p.unit === "kg" ? 1000 : 1; base += i.qty * i.price / k; cost += i.qty * c.cost / k; n++ });
+          if (n) db.sale_costs.push({ sale_id: s.id, business_id: s.business_id, day: s.day, base, cost });
+        });
+      }
       else if (this.op === "update") { out = T.filter(m); out.forEach(r => Object.assign(r, this.payload)) }
       else if (this.op === "upsert") { const o = this.payload, ex = T.find(r => this.conf.every(c => r[c] === o[c])); if (ex) Object.assign(ex, o); else T.push({ ...defaults[this.t](), ...o }); out = [ex || T[T.length - 1]] }
       else if (this.op === "delete") { out = T.filter(m); db[this.t] = T.filter(r => !m(r)); return { data: null, error: null, count: out.length } }
@@ -50,6 +59,23 @@
       const admin = db.platform_admins.some(a => a.user_id === uid);
       if (name === "subscription_price") { const b = db.businesses.find(x => x.id === a.b); const s = db.platform_settings[0]; return { data: (b && b.price) || (db.businesses.filter(x => x.price).length < s.founder_slots ? s.founder_price : s.regular_price), error: null } }
       if (name === "admin_set_free") { const b = db.businesses.find(x => x.id === a.p_business); if (!admin) return { data: null, error: { message: "not_allowed" } }; b.plan = a.p_free ? "free" : "trial"; return { data: null, error: null } }
+      if (name === "raise_prices") {
+        let n = 0;
+        db.products.filter(p => p.business_id === a.p_business && a.p_ids.includes(p.id)).forEach(p => { p.price = Math.max(a.p_step, Math.round(p.price * (1 + a.p_pct / 100) / a.p_step) * a.p_step); n++;
+          const c = db.product_costs.find(x => x.product_id === p.id); if (a.p_cost && c) c.cost = Math.round(c.cost * (1 + a.p_pct / 100) * 100) / 100 });
+        return { data: n, error: null };
+      }
+      if (name === "import_products") {
+        let nuevos = 0, actualizados = 0;
+        a.p_rows.forEach(r => {
+          let p = (r.code && db.products.find(x => x.business_id === a.p_business && x.code === r.code)) || db.products.find(x => x.business_id === a.p_business && x.name.toLowerCase() === r.name.toLowerCase());
+          if (p) { Object.assign(p, { name: r.name, price: r.price }, r.unit ? { unit: r.unit } : {}, r.code ? { code: r.code } : {}, r.stock !== undefined ? { stock: r.stock } : {}); actualizados++ }
+          else { p = { ...defaults.products(), business_id: a.p_business, name: r.name, price: r.price, unit: r.unit || "u", code: r.code || "", stock: r.stock ?? null }; db.products.push(p); nuevos++ }
+          if (r.cost !== undefined) { const c = db.product_costs.find(x => x.product_id === p.id); if (c) c.cost = r.cost; else db.product_costs.push({ product_id: p.id, business_id: a.p_business, cost: r.cost }) }
+        });
+        return { data: { nuevos, actualizados }, error: null };
+      }
+      if (name === "admin_suggestions") return { data: admin ? db.suggestions.map(x => ({ id: x.id, body: x.body, created_at: x.created_at, done: x.done, business: (db.businesses.find(b => b.id === x.business_id) || {}).name, email: String(x.user_id).replace(/^u-/, "") })) : [], error: null };
       if (name === "is_platform_admin") return { data: admin, error: null };
       if (name === "admin_user_count") return { data: admin ? new Set(db.members.map(m => m.user_id)).size : null, error: null };
       if (name === "admin_overview") return { data: admin ? db.businesses.map(b => ({ business_id: b.id, name: b.name, created_at: b.created_at, plan: b.plan, trial_ends_at: b.trial_ends_at, owner_email: b.created_by.replace(/^u-/, ""), members: db.members.filter(m => m.business_id === b.id).length, sales_30d: db.sales.filter(s => s.business_id === b.id).length })) : [], error: null };

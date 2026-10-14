@@ -9,4 +9,6 @@ PSQL=(psql "$PGURL" -v ON_ERROR_STOP=1 -q -t -o /dev/null)
 "${PSQL[@]}" -f ../stock.sql  # correrlos encima no rompe nada
 "${PSQL[@]}" -f ../alta.sql
 "${PSQL[@]}" -f ../pagos.sql
+"${PSQL[@]}" -f ../costos.sql
 "${PSQL[@]}" -f rls_test.sql
+"${PSQL[@]}" -f costos_test.sql

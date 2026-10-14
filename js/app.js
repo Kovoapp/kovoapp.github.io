@@ -105,7 +105,7 @@ function downloadCsv(name, rows) {
 // ---------------------------------------------------------------
 let sb = null, user = null;
 let biz = null, role = null, members = [];
-let shops = [], pays = [], clientes = [], provs = [], catalog = [];
+let shops = [], pays = [], clientes = [], provs = [], catalog = [], costs = {};
 const isMgr = () => role === "owner" || role === "admin";
 const activeShops = () => shops.filter(s => s.active);
 const retailShops = () => activeShops().filter(s => s.kind === "retail");
@@ -312,13 +312,15 @@ async function cancelarSuscripcion() {
 
 async function loadRefs(b) {
   const q = t => sb.from(t).select("*").eq("business_id", b);
-  const [bz, sh, pm, cl, pv, pr, mb] = await Promise.all([
+  const [bz, sh, pm, cl, pv, pr, mb, pc] = await Promise.all([
     sb.from("businesses").select("*").eq("id", b).single(),
     q("shops").order("position"), q("payment_methods").order("position"),
     q("clients").order("name"), isMgr() ? q("providers").order("name") : Promise.resolve({ data: [] }),
-    q("products").order("name"), q("members").order("created_at")
+    q("products").order("name"), q("members").order("created_at"),
+    isMgr() ? q("product_costs") : Promise.resolve({ data: [] })
   ]);
   biz = bz.data; shops = sh.data || []; pays = pm.data || []; clientes = cl.data || []; provs = pv.data || []; catalog = pr.data || []; members = mb.data || [];
+  costs = {}; (pc.data || []).forEach(c => costs[c.product_id] = num(c.cost));
 }
 
 let started = false;
@@ -705,7 +707,7 @@ function listaProvs(all) { listaBox($("pres"), provs, all ? "" : $("pbus").value
 // ---------------------------------------------------------------
 // Balance del mes
 // ---------------------------------------------------------------
-let bsales = [], bexp = [], balCsv = [];
+let bsales = [], bexp = [], bcost = [], balCsv = [];
 function monthRange() {
   const m = isoM("bmes") || hoy().slice(0, 7), [y, mo] = m.split("-").map(Number);
   const end = new Date(y, mo, 0).getDate();
@@ -713,12 +715,13 @@ function monthRange() {
 }
 async function cargarBal() {
   const [, a, b] = monthRange();
-  const [s, e] = await Promise.all([
+  const [s, e, c] = await Promise.all([
     sb.from("sales").select("shop_id,payment,amount,client_name,day,created_at,items").eq("business_id", biz.id).gte("day", a).lte("day", b),
-    sb.from("expenses").select("*").eq("business_id", biz.id).gte("day", a).lte("day", b)
+    sb.from("expenses").select("*").eq("business_id", biz.id).gte("day", a).lte("day", b),
+    sb.from("sale_costs").select("base,cost").eq("business_id", biz.id).gte("day", a).lte("day", b)
   ]);
   if (s.error) return aviso(errMsg(s.error));
-  bsales = s.data || []; bexp = e.data || []; pintarBal();
+  bsales = s.data || []; bexp = e.data || []; bcost = c.data || []; pintarBal();
 }
 function pintarBal() {
   const R = retailShops();
@@ -746,6 +749,22 @@ function pintarBal() {
   h += row("Total egresos", eg, null, "bs");
   h += row("Balance (ingresos – egresos)", subtot + may - eg, null, "bh");
   h += row("Retiros de caja (no se descuentan del balance)", sum(ret), R.map(l => sum(ret.filter(x => x.shop_id === l.id))));
+  const gb = bcost.reduce((a, x) => a + num(x.base), 0), gc = bcost.reduce((a, x) => a + num(x.cost), 0), vendido = subtot + may;
+  const g = $("bgan"); g.innerHTML = "";
+  if (!bcost.length) {
+    g.innerHTML = '<div class="mu">Cargá el costo de tus productos en Ajustes → Productos y acá vas a ver cuánto ganaste con lo que vendiste.</div>';
+  } else {
+    const fila = (a, b, cls) => { const x = document.createElement("div"); x.textContent = a; const y = document.createElement("div"); y.className = "n"; y.textContent = b; if (cls) { x.className = cls; y.className += " " + cls } g.append(x, y) };
+    const box = g; g.className = "gan";
+    fila("Vendido de productos con costo", fmt(gb)); fila("Lo que te costaron", fmt(gc));
+    fila("Ganancia", fs(gb - gc) + (gc > 0 ? " (" + margen(gb, gc) + ")" : ""), "gtot");
+    const nota = document.createElement("div"); nota.className = "mu"; nota.style.gridColumn = "1/-1";
+    const cob = vendido > 0 ? Math.min(100, Math.round(gb / vendido * 100)) : 100;
+    nota.textContent = (cob < 100 ? `Son el ${cob}% de lo que vendiste este mes: el resto no tiene costo cargado. ` : "") + "No descuenta impuestos ni gastos; para eso mirá el balance de arriba.";
+    box.appendChild(nota);
+    bc.push([]); bc.push(["GANANCIA DE PRODUCTOS CON COSTO", ""]); bc.push(["Vendido", Math.round(gb)]); bc.push(["Costo", Math.round(gc)]); bc.push(["Ganancia", Math.round(gb - gc)]);
+  }
+  if (!bcost.length) g.className = "";
   balCsv = bc; $("btabla").className = "bt"; $("btabla").innerHTML = h;
   const pc = {}; mayS.forEach(x => { const k = x.client_name || "Sin cliente"; pc[k] = (pc[k] || 0) + num(x.amount) });
   const ks = Object.keys(pc).sort((a, b) => pc[b] - pc[a]);
@@ -853,6 +872,7 @@ async function cargarAdmin() {
     r.append(c, d, cp, delBtn(async () => { await sb.from("signup_codes").delete().eq("code", sc.code); cargarAdmin() }, "Anular código"));
     box.appendChild(r);
   });
+  pintaSugerencias();
   const t = $("adminBiz"); t.innerHTML = "";
   if (!negocios.length) { t.innerHTML = '<div class="mu" style="padding:10px 0">Todavía no hay negocios</div>'; return }
   negocios.forEach(b => {
@@ -875,20 +895,61 @@ async function cargarAdmin() {
     r.append(n, d, g); t.appendChild(r);
   });
 }
+async function pintaSugerencias() {
+  const { data } = await sb.rpc("admin_suggestions");
+  const box = $("adminSug"); box.innerHTML = "";
+  const list = data || [];
+  if (!list.length) { box.innerHTML = '<div class="mu" style="padding:10px 0">Todavía no hay sugerencias</div>'; return }
+  list.forEach(x => {
+    const r = document.createElement("div"); r.className = "item"; r.style.display = "block"; if (x.done) r.style.opacity = ".6";
+    const b = document.createElement("div"); b.style.whiteSpace = "pre-wrap"; b.style.fontWeight = x.done ? "400" : "600"; b.textContent = x.body;
+    const d = document.createElement("div"); d.className = "mu"; d.textContent = [x.business, x.email, new Date(x.created_at).toLocaleDateString("es-AR")].filter(Boolean).join(" · ");
+    const row = document.createElement("div"); row.className = "row"; row.style.alignItems = "center";
+    const ok = document.createElement("button"); ok.type = "button"; ok.className = "linkbtn"; ok.textContent = x.done ? "Marcar como no leída" : "Marcar como leída";
+    ok.onclick = async () => { const { error } = await sb.from("suggestions").update({ done: !x.done }).eq("id", x.id); error ? aviso(errMsg(error)) : pintaSugerencias() };
+    row.append(ok, delBtn(async () => { if (!await ask("¿Borrar esta sugerencia?")) return; await sb.from("suggestions").delete().eq("id", x.id); pintaSugerencias() }, "Borrar sugerencia"));
+    r.append(b, d, row); box.appendChild(r);
+  });
+  const nuevas = list.filter(x => !x.done).length;
+  $("adminStats").textContent = $("adminStats").textContent.replace(/ · \d+ sugerencias? sin leer$/, "") + (nuevas ? ` · ${nuevas} sugerencia${nuevas === 1 ? "" : "s"} sin leer` : "");
+}
 async function invitar(rol) {
   const { error } = await sb.from("invites").insert({ business_id: biz.id, role: rol });
   if (error) return aviso(errMsg(error));
   toast("Código creado"); cargarInvites();
 }
+// Ganancia sobre el costo, como la calculan los comercios: costo 100 y precio 140 = 40%.
+// "1.500" = 1500, "12,5" = 12.5, "1500.5" = 1500.5
+const numAR = t => { t = String(t).trim().replace(/[$\s]/g, ""); if (t.includes(",")) t = t.replace(/\./g, "").replace(",", "."); else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, ""); return /^\d+(\.\d+)?$/.test(t) ? Number(t) : NaN };
+const margen = (precio, costo) => Math.round((num(precio) - costo) / costo * 100) + "%";
+async function guardarCosto(id, v) {
+  const { error } = v === null ? await sb.from("product_costs").delete().eq("product_id", id)
+    : await sb.from("product_costs").upsert({ product_id: id, business_id: biz.id, cost: v }, { onConflict: "product_id" });
+  if (error) return aviso(errMsg(error));
+  reloadRefs();
+}
+const filtrados = () => { const f = $("pf").value.trim().toLowerCase(); return catalog.filter(p => p.name.toLowerCase().includes(f)) };
 function renderCatalog() {
-  const f = $("pf").value.trim().toLowerCase(), t = $("plist2");
-  const list = catalog.filter(p => p.name.toLowerCase().includes(f));
+  const t = $("plist2"), list = filtrados();
+  pintaAumento();
   if (!list.length) return emptyRow(t, "Sin productos");
   t.innerHTML = "";
   list.forEach(p => {
     const tr = document.createElement("tr");
     const c2 = td(fmt(p.price) + (p.unit === "kg" ? " /kg" : "") + " ✎", "n"); c2.style.cursor = "pointer"; c2.title = "Cambiar precio";
     c2.onclick = async () => { const v = parseFloat(await ask("Nuevo precio de " + p.name, true, p.price)); if (v > 0) upd("products", p.id, { price: v }) };
+    const co = document.createElement("span"); co.className = "costo"; co.title = "Cambiar costo";
+    co.textContent = p.id in costs ? "costo " + fmt(costs[p.id]) + (costs[p.id] > 0 ? " · gana " + margen(p.price, costs[p.id]) : "") : "+ costo";
+    co.onclick = async e => {
+      e.stopPropagation();
+      const r = await ask("Costo de " + p.name + (p.unit === "kg" ? " (por kilo)" : "") + ": lo que te sale a vos. Vacío = sin costo.", "text", p.id in costs ? String(costs[p.id]) : "");
+      if (r === null) return;
+      const t = String(r).trim();
+      if (t === "") return guardarCosto(p.id, null);
+      const v = numAR(t); if (!(v >= 0)) return aviso("Escribí un número, por ejemplo 1500.");
+      guardarCosto(p.id, v);
+    };
+    c2.appendChild(co);
     const cs = td((hayStock(p) ? fmtStock(p) : "—") + " ✎", "n"); cs.style.cursor = "pointer"; cs.title = "Cambiar stock";
     if (hayStock(p) && num(p.stock) <= 0) cs.classList.add("sin-stock");
     cs.onclick = async () => {
@@ -902,6 +963,90 @@ function renderCatalog() {
     const c3 = td(); c3.appendChild(delBtn(async () => { if (await ask("¿Borrar " + p.name + "?")) { const { error } = await sb.from("products").delete().eq("id", p.id); error ? aviso(errMsg(error)) : reloadRefs() } }));
     tr.append(td(p.name + (p.code ? " · " + p.code : "")), c2, cs, c3); t.appendChild(tr);
   });
+}
+
+// Aumentar precios por porcentaje: se aplica a los productos de la lista (filtrada o completa).
+let aumRed = 10;
+function pintaAumento() {
+  if ($("paum").hidden) return;
+  chips($("aumRed"), [1, 10, 100], () => aumRed, v => { aumRed = v; pintaAumento() }, v => v === 1 ? "Sin redondear" : "A $" + v);
+  const n = filtrados().length, pct = numAR($("aumPct").value), f = $("pf").value.trim();
+  const ej = filtrados()[0];
+  let t = n === catalog.length ? `Se aplica a todos tus productos (${n}).` : n === 1 ? `Se aplica al único producto que coincide con "${f}".` : `Se aplica a los ${n} productos que coinciden con "${f}".`;
+  if (!f) t += " Para aumentar solo algunos, escribí primero en el filtro de la lista (por ejemplo, la marca).";
+  if (ej && pct > -90) t += ` Ejemplo: ${ej.name} pasa de ${fmt(ej.price)} a ${fmt(Math.max(aumRed, Math.round(ej.price * (1 + pct / 100) / aumRed) * aumRed))}.`;
+  $("aumAlc").textContent = t;
+}
+async function aumentar() {
+  const pct = numAR($("aumPct").value), list = filtrados();
+  if (!(pct > -90 && pct <= 1000) || pct === 0) return aviso("Escribí el porcentaje, por ejemplo 10.");
+  if (!list.length) return aviso("No hay productos en la lista.");
+  if (!await ask(`¿${pct > 0 ? "Aumentar" : "Bajar"} ${Math.abs(pct)}% el precio de ${list.length === 1 ? "1 producto" : list.length + " productos"}${$("aumCosto").checked ? " y su costo" : ""}?`)) return;
+  $("aumOk").disabled = true;
+  const { data, error } = await sb.rpc("raise_prices", { p_business: biz.id, p_ids: list.map(p => p.id), p_pct: pct, p_step: aumRed, p_cost: $("aumCosto").checked });
+  $("aumOk").disabled = false;
+  if (error) return aviso(errMsg(error));
+  toast(`Listo: ${data} precio${data === 1 ? "" : "s"} actualizado${data === 1 ? "" : "s"}`);
+  $("aumPct").value = ""; $("paum").hidden = true; reloadRefs();
+}
+
+// Importar productos desde una planilla de Excel o CSV.
+let importar = null;
+async function leerImport(file) {
+  const box = $("pimpRes"); box.textContent = "Leyendo " + file.name + "…"; importar = null;
+  let res;
+  try {
+    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=15");
+    res = armarProductos(await leerPlanilla(file));
+  } catch (e) {
+    box.innerHTML = ""; const d = document.createElement("div"); d.className = "imp-err";
+    d.textContent = /xls_viejo/.test(e && e.message) ? "Ese archivo es de un Excel viejo (.xls). Abrilo en Excel y guardalo como .xlsx, o descargá la planilla de ejemplo."
+      : "No pude leer ese archivo. Probá guardarlo como .xlsx o .csv."; box.appendChild(d); return;
+  }
+  box.innerHTML = "";
+  const p = document.createElement("div"); p.style.marginTop = "12px"; box.appendChild(p);
+  if (res.falta) { p.className = "imp-err"; p.textContent = "No encontré la fila de títulos. La planilla tiene que tener columnas llamadas Nombre y Precio."; return }
+  const { productos, errores } = res;
+  const existe = x => catalog.some(c => (x.code && c.code === x.code) || c.name.trim().toLowerCase() === x.name.toLowerCase());
+  const act = productos.filter(existe).length, nuevos = productos.length - act;
+  p.textContent = productos.length ? `Encontré ${productos.length} producto${productos.length === 1 ? "" : "s"}: ${nuevos} nuevo${nuevos === 1 ? "" : "s"} y ${act} que ya tenías (se actualizan).` : "No encontré productos para importar.";
+  if (productos.length) {
+    const tb = document.createElement("table"); tb.style.marginTop = "8px";
+    productos.slice(0, 5).forEach(x => { const tr = document.createElement("tr"); tr.append(td(x.name), td(fmt(x.price) + (x.unit === "kg" ? " /kg" : ""), "n"), td(x.cost !== undefined ? "costo " + fmt(x.cost) : "", "n mu")); tb.appendChild(tr) });
+    const sc = document.createElement("div"); sc.className = "scroll"; sc.appendChild(tb); box.appendChild(sc);
+    if (productos.length > 5) { const m = document.createElement("div"); m.className = "mu"; m.textContent = "y " + (productos.length - 5) + " más."; box.appendChild(m) }
+  }
+  if (errores.length) {
+    const e = document.createElement("div"); e.className = "imp-err";
+    e.textContent = `${errores.length} fila${errores.length === 1 ? "" : "s"} no se van a importar: ` + errores.slice(0, 4).join(" · ") + (errores.length > 4 ? " · …" : "");
+    box.appendChild(e);
+  }
+  if (!productos.length) return;
+  importar = productos;
+  const b = document.createElement("button"); b.className = "btn sm"; b.id = "pimpOk"; b.textContent = `Importar ${productos.length} producto${productos.length === 1 ? "" : "s"}`;
+  b.onclick = async () => {
+    b.disabled = true; b.textContent = "Importando…";
+    let n = 0, a = 0;
+    for (let i = 0; i < importar.length; i += 500) {
+      const { data, error } = await sb.rpc("import_products", { p_business: biz.id, p_rows: importar.slice(i, i + 500) });
+      if (error) { b.disabled = false; b.textContent = "Probar de nuevo"; return aviso(errMsg(error) + (i ? ` Ya se importaron los primeros ${i}.` : "")) }
+      n += data.nuevos; a += data.actualizados;
+    }
+    importar = null; box.innerHTML = ""; $("pimp").hidden = true;
+    toast(`Listo: ${n} nuevo${n === 1 ? "" : "s"}, ${a} actualizado${a === 1 ? "" : "s"}`); reloadRefs();
+  };
+  box.appendChild(b);
+}
+
+// Sugerencias: le llegan al administrador de la app.
+async function enviarSugerencia() {
+  const body = $("sugTxt").value.trim();
+  if (body.length < 3) return say("sugMsg", "Escribí tu sugerencia.", true);
+  $("sugBtn").disabled = true;
+  const { error } = await sb.from("suggestions").insert({ business_id: biz.id, body });
+  $("sugBtn").disabled = false;
+  if (error) return say("sugMsg", errMsg(error), true);
+  $("sugTxt").value = ""; say("sugMsg", "✓ ¡Gracias! Ya nos llegó.");
 }
 
 // ---------------------------------------------------------------
@@ -1126,12 +1271,25 @@ function wireOnce() {
   $("invAdmin").onclick = () => invitar("admin");
   $("pf").oninput = renderCatalog;
   $("pp").addEventListener("wheel", () => $("pp").blur());
+  $("pco").addEventListener("wheel", () => $("pco").blur());
+  $("aumPct").addEventListener("wheel", () => $("aumPct").blur());
+  $("paumBtn").onclick = () => { $("paum").hidden = !$("paum").hidden; $("pimp").hidden = true; pintaAumento() };
+  $("pimpBtn").onclick = () => { $("pimp").hidden = !$("pimp").hidden; $("paum").hidden = true };
+  $("aumPct").oninput = pintaAumento;
+  $("aumOk").onclick = aumentar;
+  $("pimpPick").onclick = () => $("pimpFile").click();
+  $("pimpFile").onchange = () => { const f = $("pimpFile").files[0]; $("pimpFile").value = ""; if (f) leerImport(f) };
+  $("pimpModelo").onclick = () => downloadCsv("productos-kovo.csv", [["Nombre", "Precio", "Costo", "Código", "Stock", "Unidad"],
+    ["Almendras peladas", 12000, 8500, "", 5, "kg"], ["Yerba 1 kg", 3200, 2300, "7790000000017", 24, "u"]]);
+  $("sugBtn").onclick = enviarSugerencia;
   $("padd").onclick = async () => {
-    const name = $("pn").value.trim(), price = parseFloat($("pp").value), code = $("pc").value.trim(), st = $("ps").value.trim();
+    const name = $("pn").value.trim(), price = parseFloat($("pp").value), code = $("pc").value.trim(), st = $("ps").value.trim(), co = $("pco").value.trim();
     if (!name || !(price > 0)) return say("pm2", "Escribí el nombre y el precio.", true);
-    const { error } = await sb.from("products").insert({ business_id: biz.id, name, price, unit: punit === "Kilo" ? "kg" : "u", code, stock: st === "" ? null : parseFloat(st) });
+    if (co !== "" && !(parseFloat(co) >= 0)) return say("pm2", "El costo tiene que ser un número.", true);
+    const { data, error } = await sb.from("products").insert({ business_id: biz.id, name, price, unit: punit === "Kilo" ? "kg" : "u", code, stock: st === "" ? null : parseFloat(st) }).select().single();
     if (error) return say("pm2", errMsg(error), true);
-    $("pn").value = ""; $("pp").value = ""; $("pc").value = ""; $("ps").value = ""; say("pm2", "✓ Producto agregado"); reloadRefs();
+    if (co !== "") { const r = await sb.from("product_costs").insert({ product_id: data.id, business_id: biz.id, cost: parseFloat(co) }); if (r.error) aviso(errMsg(r.error)) }
+    $("pn").value = ""; $("pp").value = ""; $("pc").value = ""; $("ps").value = ""; $("pco").value = ""; say("pm2", "✓ Producto agregado"); reloadRefs();
   };
   aplicarAncho();
   // Actualización en vivo del resumen cuando otro dispositivo anota algo
