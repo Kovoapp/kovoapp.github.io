@@ -91,6 +91,26 @@ section{scroll-margin-top:72px}
 @media (max-width:860px){.grilla{grid-template-columns:1fr 1fr}}
 @media (max-width:520px){.grilla,.franja{grid-template-columns:1fr}}
 
+/* Diferencias */
+.dif{padding:56px 0}
+.dif .intro{color:var(--mu);max-width:620px;margin-top:10px}
+.comp{margin-top:28px;background:var(--card);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden}
+.comp .fila{display:grid;grid-template-columns:1.1fr 1.3fr 1.3fr;border-top:1px solid var(--bd)}
+.comp .fila:first-child{border-top:0}
+.comp .fila>div{padding:16px 18px;font-size:15px}
+.comp .cab>div{font-weight:700;font-size:14px;color:var(--mu);text-transform:uppercase;letter-spacing:.04em}
+.comp .cab .k{color:var(--ac)}
+.comp .t{font-weight:600}
+.comp .k{background:var(--ac2)}
+.comp .o{color:var(--mu)}
+.comp .nota{font-size:13px;color:var(--mu);font-weight:500;display:block;margin-top:2px}
+@media (max-width:640px){
+  .comp .fila{grid-template-columns:1fr 1fr}
+  .comp .fila .t{grid-column:1/-1;padding-bottom:4px;background:var(--bg)}
+  .comp .cab .t{display:none}
+  .comp .fila>div{padding:12px 14px}
+}
+
 /* Precio */
 .precio{background:var(--ac);color:#fff;border-radius:28px;padding:48px 32px;margin:40px 0;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
 .precio .mu{color:#cfe5d6}
@@ -134,7 +154,7 @@ footer .marca img{width:26px;height:26px;border-radius:8px}
 <header id="top">
   <div class="wrap nav">
     <a class="marca" href="#"><img src="icons/icon.svg" alt="">Kovo</a>
-    <nav class="links"><a href="#funciones">Funciones</a><a href="#precio">Precio</a><a href="#preguntas">Preguntas</a></nav>
+    <nav class="links"><a href="#funciones">Funciones</a><a href="#diferencias">Por qué Kovo</a><a href="#precio">Precio</a><a href="#preguntas">Preguntas</a></nav>
     <a class="btn sec" href="app/">Entrar</a>
   </div>
 </header>
@@ -209,6 +229,20 @@ footer .marca img{width:26px;height:26px;border-radius:8px}
       <div class="ben"><h3>Cuentas para cajeros</h3><p>Invitás a tus empleados con un código. Venden, pero no ven el balance.</p></div>
       <div class="ben"><h3>Celular o compu</h3><p>Funciona en el navegador de cualquier dispositivo. No hay nada que instalar.</p></div>
       <div class="ben"><h3>Tus datos, guardados</h3><p>Todo queda en la nube: si se rompe el celular, entrás desde otro y está todo.</p></div>
+    </div>
+  </section>
+
+  <section id="diferencias" class="dif">
+    <h2>¿En qué es distinto Kovo?</h2>
+    <p class="intro">La mayoría de los sistemas de gestión están pensados para empresas grandes, con planes por niveles y equipos aparte. Kovo está hecho para el negocio de barrio que quiere ordenar la caja sin complicarse.</p>
+    <div class="comp" role="table">
+      <div class="fila cab" role="row"><div class="t"></div><div class="k">Kovo</div><div class="o">Sistemas tradicionales</div></div>
+      <div class="fila" role="row"><div class="t">Precio</div><div class="k">Uno solo, con todo incluido</div><div class="o">Planes por niveles y extras que se suman</div></div>
+      <div class="fila" role="row"><div class="t">Locales y cajeros</div><div class="k">Sin límite, sin costo extra</div><div class="o">Se cobran por usuario o por sucursal</div></div>
+      <div class="fila" role="row"><div class="t">Lector de códigos</div><div class="k">La cámara de tu celular</div><div class="o">Muchas veces, un lector que comprás aparte</div></div>
+      <div class="fila" role="row"><div class="t">Para empezar</div><div class="k">Arrancás el mismo día, desde el celular</div><div class="o">Configuración y capacitación</div></div>
+      <div class="fila" role="row"><div class="t">Ayuda</div><div class="k">WhatsApp directo con quien hace Kovo</div><div class="o">Mesa de ayuda o formularios</div></div>
+      <div class="fila" role="row"><div class="t">Factura electrónica</div><div class="k">Todavía no</div><div class="o">Sí, casi siempre en planes más caros</div></div>
     </div>
   </section>
 
