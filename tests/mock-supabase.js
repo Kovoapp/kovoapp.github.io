@@ -25,7 +25,7 @@
     lte(c, v) { this.f.push(r => r[c] <= v); return this } gt(c, v) { this.f.push(r => r[c] > v); return this }
     is(c, v) { this.f.push(r => (r[c] ?? null) === v); return this }
     order(c, o) { this.ord = [c, !o || o.ascending !== false]; return this }
-    single() { this.one = true; return this }
+    single() { this.one = true; return this } limit(n) { this.lim = n; return this }
     insert(o) { this.op = "insert"; this.payload = o; return this } update(o) { this.op = "update"; this.payload = o; return this }
     upsert(o, opt) { this.op = "upsert"; this.payload = o; this.conf = (opt && opt.onConflict || "id").split(","); return this }
     delete() { this.op = "delete"; return this }
@@ -44,7 +44,7 @@
       else if (this.op === "update") { out = T.filter(m); out.forEach(r => Object.assign(r, this.payload)) }
       else if (this.op === "upsert") { const o = this.payload, ex = T.find(r => this.conf.every(c => r[c] === o[c])); if (ex) Object.assign(ex, o); else T.push({ ...defaults[this.t](), ...o }); out = [ex || T[T.length - 1]] }
       else if (this.op === "delete") { out = T.filter(m); db[this.t] = T.filter(r => !m(r)); return { data: null, error: null, count: out.length } }
-      else { out = T.filter(m).map(r => ({ ...r })); if (this.ord) { const [c, asc] = this.ord; out.sort((a, b) => (a[c] > b[c] ? 1 : a[c] < b[c] ? -1 : 0) * (asc ? 1 : -1)) } }
+      else { out = T.filter(m).map(r => ({ ...r })); if (this.ord) { const [c, asc] = this.ord; out.sort((a, b) => (a[c] > b[c] ? 1 : a[c] < b[c] ? -1 : 0) * (asc ? 1 : -1)) } if (this.lim) out = out.slice(0, this.lim) }
       out = JSON.parse(JSON.stringify(out));
       return { data: this.one ? out[0] || null : out, error: null };
     }

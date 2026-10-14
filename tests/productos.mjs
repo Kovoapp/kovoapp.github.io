@@ -101,6 +101,38 @@ await page.waitForFunction(() => document.getElementById("bgan").textContent.inc
 const gan = await page.textContent("#bgan");
 check(gan.includes("$3.520") && gan.includes("$2.310") && gan.includes("$1.210") && gan.includes("52%"), "el balance muestra la ganancia del mes: vendido, costo y ganancia");
 await snap("ganancia");
+check((await page.textContent("#mesKpis")).includes("Ventas1") && (await page.textContent("#mesTop")).includes("Yerba"), "el balance muestra cuántas ventas hubo en el mes y lo más vendido");
+
+// Cierre de caja: cantidad de ventas, ticket promedio y lo más vendido del día
+await page.click('.tab[data-t="venta"]');
+await page.fill("#busq", "Maní"); await page.click("#res .chip");
+await page.fill("#busq", "Maní"); await page.click("#res .chip");
+await page.click("#enviar");
+await page.waitForFunction(() => window.__SB__.__db.sales.length === 2);
+await page.click('.tab[data-t="resumen"]');
+await page.waitForFunction(() => document.getElementById("cierreKpis").textContent.includes("Ventas2"));
+const kp = await page.textContent("#cierreKpis");
+check(kp.includes("$7.640") && kp.includes("Ticket promedio$3.820"), "el cierre muestra lo vendido, la cantidad de ventas y el ticket promedio");
+const top = await page.$$eval("#cierreTop tr", t => t.map(r => r.textContent));
+check(top.length === 2 && top[0].includes("Maní") && top[0].includes("2 u") && top[0].includes("$4.120") && top[1].includes("Yerba"), "y lo más vendido del día, ordenado por plata");
+await snap("cierre");
+
+// Alertas de stock: sin stock, o que se termina en una semana al ritmo de venta
+await db(() => {
+  const D = window.__SB__.__db, y = D.products.find(p => p.name === "Yerba"), m = D.products.find(p => p.name === "Nueces, mariposa");
+  y.stock = 2; m.stock = 0;
+  for (let i = 0; i < 8; i++) D.sales.push({ id: "v" + i, business_id: y.business_id, day: new Date().toISOString().slice(0, 10), created_at: new Date().toISOString(), amount: 3520, payment: "Efectivo", items: [{ id: y.id, name: "Yerba", qty: 1, unit: "u", price: 3520 }] });
+});
+await page.click("#cfg"); await page.click("#cbizSave"); await page.click("#cfgBack");
+await page.click('.tab[data-t="venta"]');
+await page.waitForSelector("#stockAviso:not([hidden])");
+check((await page.textContent("#stockAviso")).includes("2 productos con poco stock (1 sin stock)"), "en Vender avisa cuántos productos tienen poco stock");
+await page.click("#stockAviso");
+await page.waitForSelector("#stockCard:not([hidden])");
+const st = await page.$$eval("#stockList tr", t => t.map(r => r.textContent));
+check(st[0].includes("Nueces, mariposa") && st[0].includes("Sin stock") && st[1].includes("Yerba") && st[1].includes("quedan 2 u") && st[1].includes("Alcanza para 7 días"), "y en el cierre dice cuáles: sin stock y para cuántos días alcanza");
+check(!(await page.textContent("#stockList")).includes("Almendras"), "no avisa de productos que tienen stock de sobra");
+await snap("stock");
 
 // Sugerencias
 await page.click("#cfg");
