@@ -578,9 +578,11 @@ function pintaAlertas() {
     const tr = document.createElement("tr");
     const e = td(dias === 0 ? "Sin stock" : `Alcanza para ${Math.max(1, Math.round(dias))} día${Math.round(dias) <= 1 ? "" : "s"}`, "n");
     e.style.color = dias === 0 ? "var(--rd)" : "var(--wa)";
-    tr.append(td(p.name), td(dias === 0 ? "" : "quedan " + fmtStock(p), "n cant"), e); t.appendChild(tr);
+    const nom = td(p.name, "stock-n");
+    if (dias) { const q = document.createElement("small"); q.textContent = "quedan " + fmtStock(p); nom.appendChild(q) }
+    tr.append(nom, e); t.appendChild(tr);
   });
-  if (n > 30) { const tr = document.createElement("tr"); const c = td(`y ${n - 30} más`, "mu"); c.colSpan = 3; tr.appendChild(c); t.appendChild(tr) }
+  if (n > 30) { const tr = document.createElement("tr"); const c = td(`y ${n - 30} más`, "mu"); c.colSpan = 2; tr.appendChild(c); t.appendChild(tr) }
 }
 // El cierre como texto, para mandarlo por WhatsApp o guardarlo.
 async function compartirCierre() {
