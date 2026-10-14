@@ -62,9 +62,14 @@ export async function crearSuscripcion({ env, fetch: fetchFn, authHeader, body }
 
   if (body.action === "cancelar") {
     if (!biz.mp_preapproval_id) return res(400, { error: "sin_suscripcion" });
-    const pre = await mp(`/preapproval/${encodeURIComponent(biz.mp_preapproval_id)}`, { method: "PUT", body: { status: "cancelled" } });
-    await db("/rest/v1/rpc/mp_apply", { method: "POST", body: { p_business: b, p_preapproval: biz.mp_preapproval_id, p_status: pre.status || "cancelled", p_next: null } });
-    return res(200, { ok: true });
+    const path = `/preapproval/${encodeURIComponent(biz.mp_preapproval_id)}`;
+    // Si ya está cancelada en Mercado Pago, o no existe en esta cuenta (por ejemplo, se creó con las
+    // credenciales de prueba), no hay nada que cobrar: solo se anota en el negocio.
+    const actual = await mp(path).catch(e => { if (e.status === 404) return null; throw e });
+    let estado = "cancelled";
+    if (actual && actual.status !== "cancelled") estado = (await mp(path, { method: "PUT", body: { status: "cancelled" } })).status || "cancelled";
+    await db("/rest/v1/rpc/mp_apply", { method: "POST", body: { p_business: b, p_preapproval: biz.mp_preapproval_id, p_status: estado, p_next: null } });
+    return res(200, { ok: true, status: estado });
   }
 
   const price = Number(await db("/rest/v1/rpc/subscription_price", { method: "POST", body: { b } }));
