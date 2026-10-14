@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Kovo · La caja de tu negocio, en el celular</title>
 <meta name="description" content="Kovo convierte tu celular en la caja de tu negocio: ventas, escáner de códigos con la cámara, stock, caja diaria y balance del mes. Probá 7 días gratis.">
+<link rel="canonical" href="https://kovoapp.github.io/">
 <meta name="theme-color" content="#2c7a4b">
 <meta property="og:title" content="Kovo · La caja de tu negocio, en el celular">
 <meta property="og:description" content="Ventas, escáner con la cámara, stock, caja diaria y balance del mes. Probá 7 días gratis.">
@@ -19,142 +20,13 @@
   if (/suscripcion=|access_token|type=recovery|error_description/.test(location.search + location.hash))
     location.replace("app/" + location.search + location.hash);
 </script>
-<style>
-:root{--bg:#f6f7f3;--card:#fff;--tx:#17231b;--mu:#5d6a60;--bd:#dde3da;--ac:#2c7a4b;--ac-d:#1f5c38;--ac2:#e3f0e6;--ac3:#cfe5d6;--wa:#fff4dc;
-  --f-d:"Bricolage Grotesque",system-ui,sans-serif;--f-ui:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;--r:18px}
-*{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--f-ui);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased}
-a{color:inherit}
-img{max-width:100%;display:block}
-.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-h1,h2,h3{font-family:var(--f-d);letter-spacing:-.02em;line-height:1.1;margin:0}
-h1{font-size:clamp(36px,6vw,60px);font-weight:800}
-h2{font-size:clamp(28px,4vw,40px);font-weight:700}
-h3{font-size:20px;font-weight:700}
-p{margin:0}
-.mu{color:var(--mu)}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 24px;border-radius:14px;font-weight:700;font-size:17px;text-decoration:none;border:1.5px solid transparent;transition:transform .15s,background .15s}
-.btn:active{transform:scale(.98)}
-.btn.pri{background:var(--ac);color:#fff}
-.btn.pri:hover{background:var(--ac-d)}
-.btn.sec{background:var(--card);border-color:var(--bd)}
-.btn.sec:hover{border-color:var(--ac)}
-.btn svg{flex:0 0 auto}
-
-/* Encabezado */
-header{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid transparent}
-header.sombra{border-bottom-color:var(--bd)}
-.nav{display:flex;align-items:center;gap:18px;height:64px}
-.marca{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--f-d);font-weight:800;font-size:24px;letter-spacing:-.02em}
-.marca img{width:36px;height:36px;border-radius:10px}
-.nav .links{display:flex;gap:22px;margin-left:auto;font-weight:600;font-size:15px}
-.nav .links a{text-decoration:none;color:var(--mu)}
-.nav .links a:hover{color:var(--tx)}
-.nav .btn{min-height:42px;padding:0 18px;font-size:15px}
-@media (max-width:720px){.nav .links{display:none}.nav .btn{margin-left:auto}}
-
-/* Portada */
-.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;padding:56px 0 40px}
-.hero .chip{display:inline-block;background:var(--ac2);color:var(--ac-d);font-weight:700;font-size:14px;padding:6px 12px;border-radius:999px;margin-bottom:18px}
-.hero p.sub{font-size:20px;color:var(--mu);margin:18px 0 28px;max-width:34ch}
-.ctas{display:flex;gap:12px;flex-wrap:wrap}
-.tranqui{margin-top:14px;font-size:14px;color:var(--mu)}
-.tel{position:relative;justify-self:center;width:min(320px,80vw);aspect-ratio:390/760;border-radius:44px;background:#17231b;padding:10px;box-shadow:0 30px 60px -20px rgba(23,35,27,.35),0 10px 20px -10px rgba(23,35,27,.2)}
-.tel img{width:100%;height:100%;object-fit:cover;object-position:top;border-radius:34px}
-
-@media (max-width:860px){.hero{grid-template-columns:1fr;gap:40px;padding-top:36px;text-align:center}.hero p.sub{margin-inline:auto}.ctas{justify-content:center}}
-
-/* Beneficios */
-.franja{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0 72px}
-.ben{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:20px}
-.ben .ic{width:44px;height:44px;border-radius:12px;background:var(--ac2);color:var(--ac);display:grid;place-items:center;margin-bottom:12px}
-.ben h3{font-size:17px}
-.ben p{font-size:15px;color:var(--mu);margin-top:4px}
-@media (max-width:860px){.franja{grid-template-columns:1fr 1fr}}
-
-/* Funciones con capturas */
-section{scroll-margin-top:72px}
-.bloque{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;padding:40px 0}
-.bloque.inv .txt{order:2}
-.bloque .txt p{font-size:18px;color:var(--mu);margin-top:14px}
-.bloque ul{list-style:none;padding:0;margin:20px 0 0;display:grid;gap:10px}
-.bloque li{display:flex;gap:10px;align-items:flex-start}
-.bloque li::before{content:"";flex:0 0 22px;height:22px;border-radius:50%;margin-top:2px;background:var(--ac2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232c7a4b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12l4 4 8-8'/%3E%3C/svg%3E") center/14px no-repeat}
-.cap{justify-self:center;width:min(300px,78vw);border-radius:28px;overflow:hidden;border:1px solid var(--bd);box-shadow:0 20px 40px -20px rgba(23,35,27,.3);background:var(--card)}
-@media (max-width:860px){.bloque{grid-template-columns:1fr;gap:28px}.bloque.inv .txt{order:0}}
-
-/* Más funciones */
-.mas{padding:56px 0}
-.grilla{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:28px}
-.grilla .ben{padding:18px}
-@media (max-width:860px){.grilla{grid-template-columns:1fr 1fr}}
-@media (max-width:520px){.grilla,.franja{grid-template-columns:1fr}}
-
-/* Diferencias */
-.dif{padding:56px 0}
-.dif .intro{color:var(--mu);max-width:620px;margin-top:10px}
-.comp{margin-top:28px;background:var(--card);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden}
-.comp .fila{display:grid;grid-template-columns:1.1fr 1.3fr 1.3fr;border-top:1px solid var(--bd)}
-.comp .fila:first-child{border-top:0}
-.comp .fila>div{padding:16px 18px;font-size:15px}
-.comp .cab>div{font-weight:700;font-size:14px;color:var(--mu);text-transform:uppercase;letter-spacing:.04em}
-.comp .cab .k{color:var(--ac)}
-.comp .t{font-weight:600}
-.comp .k{background:var(--ac2)}
-.comp .o{color:var(--mu)}
-.comp .nota{font-size:13px;color:var(--mu);font-weight:500;display:block;margin-top:2px}
-@media (max-width:640px){
-  .comp .fila{grid-template-columns:1fr 1fr}
-  .comp .fila .t{grid-column:1/-1;padding-bottom:4px;background:var(--bg)}
-  .comp .cab .t{display:none}
-  .comp .fila>div{padding:12px 14px}
-}
-
-/* Precio */
-.precio{background:var(--ac);color:#fff;border-radius:28px;padding:48px 32px;margin:40px 0;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
-.precio .mu{color:#cfe5d6}
-.precio .tarjeta{background:#fff;color:var(--tx);border-radius:22px;padding:28px}
-.precio .lanz{display:inline-block;background:var(--wa);color:#8a5a00;font-weight:700;font-size:13px;padding:5px 10px;border-radius:999px}
-.precio .monto{font-family:var(--f-d);font-weight:800;font-size:52px;letter-spacing:-.03em;margin-top:12px;line-height:1}
-.precio .monto small{font-size:18px;font-weight:600;color:var(--mu);letter-spacing:0}
-.precio .despues{margin-top:8px;color:var(--mu)}
-.precio ul{list-style:none;padding:0;margin:20px 0 24px;display:grid;gap:8px;font-size:15px}
-.precio ul li::before{content:"✓ ";color:var(--ac);font-weight:800}
-.precio .btn{width:100%}
-@media (max-width:860px){.precio{grid-template-columns:1fr;padding:32px 20px}}
-@media (max-width:520px){.precio .monto{font-size:46px}.precio .monto small{display:block;margin-top:8px}}
-
-/* Pasos */
-.pasos{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:28px;counter-reset:p}
-.paso{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:22px;counter-increment:p}
-.paso::before{content:counter(p);display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--ac);color:#fff;font-weight:800;margin-bottom:12px}
-.paso p{color:var(--mu);font-size:15px;margin-top:4px}
-@media (max-width:720px){.pasos{grid-template-columns:1fr}}
-
-/* Preguntas */
-.faq{max-width:760px;margin:0 auto;padding:64px 0}
-details{background:var(--card);border:1px solid var(--bd);border-radius:14px;margin-top:10px}
-summary{cursor:pointer;list-style:none;padding:18px 20px;font-weight:700;display:flex;justify-content:space-between;gap:12px}
-summary::-webkit-details-marker{display:none}
-summary::after{content:"+";font-size:22px;line-height:1;color:var(--ac)}
-details[open] summary::after{content:"–"}
-details p{padding:0 20px 18px;color:var(--mu)}
-
-.final{text-align:center;padding:56px 0 72px}
-.final p{font-size:19px;margin:14px 0 26px}
-footer{border-top:1px solid var(--bd);padding:28px 0 40px;font-size:14px;color:var(--mu)}
-footer .wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
-footer a{text-decoration:none;font-weight:600}
-footer .marca{font-size:18px;color:var(--tx)}
-footer .marca img{width:26px;height:26px;border-radius:8px}
-</style>
+<link rel="stylesheet" href="estilo.css?v=1">
 </head>
 <body>
 <header id="top">
   <div class="wrap nav">
     <a class="marca" href="#"><img src="icons/icon.svg" alt="">Kovo</a>
-    <nav class="links"><a href="#funciones">Funciones</a><a href="#diferencias">Por qué Kovo</a><a href="#precio">Precio</a><a href="#preguntas">Preguntas</a></nav>
+    <nav class="links"><a href="#funciones">Funciones</a><a href="#rubros">Rubros</a><a href="#diferencias">Por qué Kovo</a><a href="#precio">Precio</a><a href="#preguntas">Preguntas</a></nav>
     <a class="btn sec" href="app/">Entrar</a>
   </div>
 </header>
@@ -232,6 +104,17 @@ footer .marca img{width:26px;height:26px;border-radius:8px}
     </div>
   </section>
 
+  <section id="rubros" class="rubros">
+    <h2>Kovo para tu rubro</h2>
+    <div class="lista">
+      <a class="rubro" href="kiosco/"><b>Kiosco</b><span>Una venta atrás de otra</span></a>
+      <a class="rubro" href="almacen/"><b>Almacén</b><span>Fiambre y queso por peso</span></a>
+      <a class="rubro" href="dietetica/"><b>Dietética</b><span>Casi todo se vende suelto</span></a>
+      <a class="rubro" href="verduleria/"><b>Verdulería</b><span>Casi todo va por kilo</span></a>
+      <a class="rubro" href="carniceria/"><b>Carnicería</b><span>Cada corte, por kilo</span></a>
+    </div>
+  </section>
+
   <section id="diferencias" class="dif">
     <h2>¿En qué es distinto Kovo?</h2>
     <p class="intro">La mayoría de los sistemas de gestión están pensados para empresas grandes, con planes por niveles y equipos aparte. Kovo está hecho para el negocio de barrio que quiere ordenar la caja sin complicarse.</p>
@@ -299,6 +182,7 @@ footer .marca img{width:26px;height:26px;border-radius:8px}
   <div class="wrap">
     <a class="marca" href="#"><img src="icons/icon.svg" alt="">Kovo</a>
     <span>La caja de tu negocio, en el celular.</span>
+    <span class="otros" style="margin:0;justify-content:flex-start"><a href="kiosco/">Kiosco</a><a href="almacen/">Almacén</a><a href="dietetica/">Dietética</a><a href="verduleria/">Verdulería</a><a href="carniceria/">Carnicería</a></span>
     <span style="margin-left:auto;display:flex;gap:16px"><a class="wa" href="#" target="_blank" rel="noopener">WhatsApp</a><a href="app/">Entrar</a></span>
   </div>
 </footer>
