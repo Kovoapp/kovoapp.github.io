@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="styles.css?v=18">
+<link rel="stylesheet" href="styles.css?v=19">
 </head>
 <body>
 
@@ -275,6 +275,7 @@
 </nav>
 
 <section id="venta">
+  <button type="button" class="note stock-aviso" id="stockAviso" hidden></button>
   <div class="card">
     <label style="margin-top:0">Local</label>
     <div class="row" id="locales"></div>
@@ -325,6 +326,18 @@
     <div class="scroll"><table id="rdia" style="margin-top:12px"></table></div>
     <div id="porGrupo"></div>
     <button class="btn sm" id="csv">Descargar ventas del día (CSV)</button>
+  </div>
+  <div class="card" id="cierreCard">
+    <h2 class="sect">Cierre de caja</h2>
+    <div class="kpis" id="cierreKpis"></div>
+    <h3 class="sub">Lo más vendido</h3>
+    <div class="scroll"><table id="cierreTop"></table></div>
+    <button type="button" class="btn sm" id="cierreShare">Compartir cierre</button>
+  </div>
+  <div class="card" id="stockCard" hidden>
+    <h2 class="sect">Stock bajo</h2>
+    <div class="mu">Productos sin stock o que, al ritmo de venta de los últimos 30 días, se terminan en una semana o menos.</div>
+    <div class="scroll"><table id="stockList" style="margin-top:8px"></table></div>
   </div>
   <div class="card">
     <div class="tot" style="margin-top:0"><span><b>Proveedores</b><br><span class="mu" id="rpcant"></span></span><span class="big" id="rptot">$0</span></div>
@@ -402,6 +415,12 @@
     </div>
   </div>
   <div class="card">
+    <h2 class="sect">Ventas del mes</h2>
+    <div class="kpis" id="mesKpis"></div>
+    <h3 class="sub">Lo más vendido del mes</h3>
+    <div class="scroll"><table id="mesTop"></table></div>
+  </div>
+  <div class="card">
     <h2 class="sect">Ganancia del mes</h2>
     <div id="bgan"></div>
   </div>
@@ -414,6 +433,6 @@
 </div>
 
 <div id="ticket"></div>
-<script type="module" src="js/app.js?v=18"></script>
+<script type="module" src="js/app.js?v=19"></script>
 </body>
 </html>

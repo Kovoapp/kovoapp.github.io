@@ -359,7 +359,7 @@ function startApp() {
   $("tabs").hidden = !isMgr();
   $$(".mgr").forEach(e => e.hidden = !isMgr());
   $$(".owner-only").forEach(e => e.hidden = role !== "owner");
-  pintaPlan(); pintaVista();
+  pintaPlan(); pintaVista(); cargarAlertas();
   if (!activeShops().find(s => s.id === local)) local = (activeShops()[0] || {}).id;
   renderLocales(); renderPagos(); renderCart(); renderClientes(); renderCatalog(); renderSettings(); pintaUndo();
   if (!started) { started = true; wireOnce() }
@@ -407,7 +407,7 @@ function addProd(p) {
 // Descuenta (o devuelve) en la lista local lo mismo que descuenta la base al anotar o borrar una venta.
 function moverStock(items, sgn) {
   (items || []).forEach(i => { const p = catalog.find(x => x.id === i.id); if (hayStock(p)) p.stock = num(p.stock) + sgn * (p.unit === "kg" ? i.qty / 1000 : i.qty) });
-  renderCatalog();
+  renderCatalog(); calcAlertas();
 }
 function renderResults() {
   const q = $("busq").value.trim().toLowerCase(), box = $("res"); box.innerHTML = "";
@@ -518,6 +518,84 @@ function printTicket(s) {
 }
 
 // ---------------------------------------------------------------
+// Lo más vendido (cierre del día y del mes) y alertas de stock
+// ---------------------------------------------------------------
+// Suma los productos de las ventas. Los de kilo se guardan en gramos.
+function masVendidos(lista) {
+  const m = new Map();
+  lista.forEach(v => (Array.isArray(v.items) ? v.items : []).forEach(i => {
+    const k = i.id || i.name, kg = i.unit === "kg";
+    const x = m.get(k) || { name: i.name, kg, qty: 0, total: 0 };
+    x.qty += kg ? num(i.qty) / 1000 : num(i.qty); x.total += num(i.qty) * num(i.price) / (kg ? 1000 : 1);
+    m.set(k, x);
+  }));
+  return [...m.values()].sort((a, b) => b.total - a.total || b.qty - a.qty);
+}
+const fmtCant = x => (Math.round(x.qty * 1000) / 1000).toLocaleString("es-AR") + (x.kg ? " kg" : " u");
+function kpis(box, items) {
+  box.innerHTML = "";
+  items.forEach(([t, v, s]) => {
+    const k = document.createElement("div"); k.className = "kpi";
+    const a = document.createElement("span"); a.textContent = t; const b = document.createElement("b"); b.textContent = v; k.append(a, b);
+    if (s) { const c = document.createElement("small"); c.textContent = s; k.appendChild(c) }
+    box.appendChild(k);
+  });
+}
+function pintaTop(table, lista, n, vacio) {
+  table.innerHTML = ""; table.className = "masv";
+  const top = masVendidos(lista).slice(0, n);
+  if (!top.length) return emptyRow(table, vacio);
+  top.forEach((x, i) => { const tr = document.createElement("tr"); tr.append(td(i + 1 + ".", "pos"), td(x.name), td(fmtCant(x), "n cant"), td(fmt(x.total), "n")); table.appendChild(tr) });
+}
+const promedio = l => l.length ? fmt(sum(l) / l.length) : "$0";
+
+// Alertas de stock: sin stock, o que al ritmo de venta de los últimos 30 días se terminan en 7 días o menos.
+let alertasStock = [], vendido30 = new Map();
+async function cargarAlertas() {
+  if (!isMgr() || !catalog.some(hayStock)) { alertasStock = []; return pintaAlertas() }
+  const d = new Date(); d.setDate(d.getDate() - 30);
+  const desde = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const { data } = await sb.from("sales").select("items").eq("business_id", biz.id).gte("day", desde).order("created_at", { ascending: false }).limit(2000);
+  vendido30 = new Map();
+  (data || []).forEach(v => (Array.isArray(v.items) ? v.items : []).forEach(i => { if (i.id) vendido30.set(i.id, (vendido30.get(i.id) || 0) + (i.unit === "kg" ? num(i.qty) / 1000 : num(i.qty))) }));
+  calcAlertas();
+}
+function calcAlertas() {
+  if (!isMgr()) { alertasStock = []; return pintaAlertas() }
+  alertasStock = catalog.filter(hayStock).map(p => {
+    const porDia = (vendido30.get(p.id) || 0) / 30, st = num(p.stock);
+    return { p, dias: st <= 0 ? 0 : porDia > 0 ? st / porDia : Infinity };
+  }).filter(x => x.dias <= 7).sort((a, b) => a.dias - b.dias || a.p.name.localeCompare(b.p.name));
+  pintaAlertas();
+}
+function pintaAlertas() {
+  const n = alertasStock.length, sin = alertasStock.filter(x => x.dias === 0).length;
+  $("stockAviso").hidden = !n || !isMgr();
+  $("stockAviso").textContent = n ? `⚠ ${n} producto${n === 1 ? "" : "s"} con poco stock${sin ? ` (${sin} sin stock)` : ""}. Tocá para ver cuáles.` : "";
+  $("stockCard").hidden = !n;
+  const t = $("stockList"); t.innerHTML = "";
+  alertasStock.slice(0, 30).forEach(({ p, dias }) => {
+    const tr = document.createElement("tr");
+    const e = td(dias === 0 ? "Sin stock" : `Alcanza para ${Math.max(1, Math.round(dias))} día${Math.round(dias) <= 1 ? "" : "s"}`, "n");
+    e.style.color = dias === 0 ? "var(--rd)" : "var(--wa)";
+    tr.append(td(p.name), td(dias === 0 ? "" : "quedan " + fmtStock(p), "n cant"), e); t.appendChild(tr);
+  });
+  if (n > 30) { const tr = document.createElement("tr"); const c = td(`y ${n - 30} más`, "mu"); c.colSpan = 3; tr.appendChild(c); t.appendChild(tr) }
+}
+// El cierre como texto, para mandarlo por WhatsApp o guardarlo.
+async function compartirCierre() {
+  const dia = isoF("dia") || hoy(), f = new Date(dia + "T12:00").toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+  const l = [`Cierre de caja · ${biz.name}`, f.charAt(0).toUpperCase() + f.slice(1), "", `Vendido: ${fmt(sum(ventas))} (${ventas.length} venta${ventas.length === 1 ? "" : "s"})`, `Ticket promedio: ${promedio(ventas)}`];
+  const pagos = [...new Set(ventas.map(x => x.payment))].map(pg => [pg, ventas.filter(x => x.payment === pg)]);
+  if (pagos.length) { l.push("", "Por medio de pago:"); pagos.forEach(([pg, v]) => l.push(`· ${pg}: ${fmt(sum(v))}`)) }
+  const top = masVendidos(ventas).slice(0, 5);
+  if (top.length) { l.push("", "Lo más vendido:"); top.forEach((x, i) => l.push(`${i + 1}. ${x.name} · ${fmtCant(x)} · ${fmt(x.total)}`)) }
+  const txt = l.join("\n");
+  if (navigator.share) { try { await navigator.share({ text: txt }); return } catch (e) { if (e && e.name === "AbortError") return } }
+  try { await navigator.clipboard.writeText(txt); toast("Cierre copiado: pegalo en WhatsApp") } catch (e) { aviso(txt) }
+}
+
+// ---------------------------------------------------------------
 // Resumen del día
 // ---------------------------------------------------------------
 let ventas = [], gastosDia = [], aper = [];
@@ -531,10 +609,12 @@ async function cargarResumen() {
   ]);
   if (s.error) return aviso(errMsg(s.error));
   ventas = s.data || []; gastosDia = e.data || []; aper = o.data || [];
-  pintarResumen();
+  pintarResumen(); cargarAlertas();
 }
 function pintarResumen() {
   $("total").textContent = fmt(sum(ventas));
+  kpis($("cierreKpis"), [["Vendido", fmt(sum(ventas))], ["Ventas", String(ventas.length)], ["Ticket promedio", promedio(ventas)]]);
+  pintaTop($("cierreTop"), ventas, 5, "Todavía no hay productos vendidos este día");
   const sd = gastosDia.filter(x => x.kind !== "withdrawal"), retiros = gastosDia.filter(x => x.kind === "withdrawal");
   const btn = k => `<button type="button" class="chip camb" data-k="${k}" style="font-size:16px;min-width:40px;min-height:36px;padding:4px 10px;margin-right:8px" aria-label="Ver por medio de pago">${abiertosRes.has(k) ? "▴" : "▾"}</button>`;
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -790,6 +870,12 @@ function pintarBal() {
     bc.push([]); bc.push(["GANANCIA DE PRODUCTOS CON COSTO", ""]); bc.push(["Vendido", Math.round(gb)]); bc.push(["Costo", Math.round(gc)]); bc.push(["Ganancia", Math.round(gb - gc)]);
   }
   if (!bcost.length) g.className = "";
+  // Ventas del mes: cantidad, ticket promedio, el mejor día y lo más vendido.
+  const porDia = {}; bsales.forEach(x => { porDia[x.day] = (porDia[x.day] || 0) + num(x.amount) });
+  const mejor = Object.keys(porDia).sort((a, b) => porDia[b] - porDia[a])[0];
+  kpis($("mesKpis"), [["Ventas", String(bsales.length)], ["Ticket promedio", promedio(bsales)],
+    ["Mejor día", mejor ? new Date(mejor + "T12:00").toLocaleDateString("es-AR", { weekday: "short", day: "numeric" }) : "—", mejor ? fmt(porDia[mejor]) : ""]]);
+  pintaTop($("mesTop"), bsales, 10, "Todavía no hay productos vendidos este mes");
   balCsv = bc; $("btabla").className = "bt"; $("btabla").innerHTML = h;
   const pc = {}; mayS.forEach(x => { const k = x.client_name || "Sin cliente"; pc[k] = (pc[k] || 0) + num(x.amount) });
   const ks = Object.keys(pc).sort((a, b) => pc[b] - pc[a]);
@@ -1044,7 +1130,7 @@ async function leerImport(file) {
   const box = $("pimpRes"); box.textContent = "Leyendo " + file.name + "…"; importar = null;
   let res;
   try {
-    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=18");
+    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=19");
     res = armarProductos(await leerPlanilla(file));
   } catch (e) {
     box.innerHTML = ""; const d = document.createElement("div"); d.className = "imp-err";
@@ -1324,6 +1410,8 @@ function wireOnce() {
     if (error) return aviso(errMsg(error));
     $("cpayNew").value = ""; reloadRefs();
   };
+  $("cierreShare").onclick = compartirCierre;
+  $("stockAviso").onclick = () => { goTab("resumen"); setTimeout(() => $("stockCard").scrollIntoView({ behavior: "smooth", block: "start" }), 300) };
   $("planBtn").onclick = suscribir; $("planMes").onclick = pagarMes; $("planCancel").onclick = cancelarSuscripcion;
   $("admPrecios").onclick = async () => {
     const v = { founder_slots: parseInt($("admSlots").value), founder_price: parseFloat($("admFounder").value), regular_price: parseFloat($("admRegular").value) };
