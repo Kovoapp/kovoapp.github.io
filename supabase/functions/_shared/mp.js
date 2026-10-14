@@ -64,8 +64,9 @@ export async function crearSuscripcion({ env, fetch: fetchFn, authHeader, body }
     if (!biz.mp_preapproval_id) return res(400, { error: "sin_suscripcion" });
     const path = `/preapproval/${encodeURIComponent(biz.mp_preapproval_id)}`;
     // Si ya está cancelada en Mercado Pago, o no existe en esta cuenta (por ejemplo, se creó con las
-    // credenciales de prueba), no hay nada que cobrar: solo se anota en el negocio.
-    const actual = await mp(path).catch(e => { if (e.status === 404) return null; throw e });
+    // credenciales de prueba), no hay nada que cobrar: solo se anota en el negocio. Según el caso,
+    // Mercado Pago contesta 400, 401, 403 o 404 cuando la suscripción es de otra cuenta.
+    const actual = await mp(path).catch(e => { if ([400, 401, 403, 404].includes(e.status)) return null; throw e });
     let estado = "cancelled";
     if (actual && actual.status !== "cancelled") estado = (await mp(path, { method: "PUT", body: { status: "cancelled" } })).status || "cancelled";
     await db("/rest/v1/rpc/mp_apply", { method: "POST", body: { p_business: b, p_preapproval: biz.mp_preapproval_id, p_status: estado, p_next: null } });

@@ -306,7 +306,11 @@ async function suscribir() {
 async function cancelarSuscripcion() {
   if (!await ask("¿Cancelar la suscripción? Podés seguir usando la caja hasta el fin del mes que ya pagaste.")) return;
   const { error } = await sb.functions.invoke("mp-suscribir", { body: { business_id: biz.id, action: "cancelar" } });
-  if (error) return aviso("No se pudo cancelar. Probá de nuevo o cancelala desde tu cuenta de Mercado Pago.");
+  if (error) {
+    // El motivo que devolvió el servidor ayuda a saber qué pasó.
+    let motivo = ""; try { motivo = (await error.context.json()).error || "" } catch {}
+    return aviso("No se pudo cancelar. Probá de nuevo o cancelala desde tu cuenta de Mercado Pago." + (motivo ? ` (detalle: ${motivo})` : ""));
+  }
   toast("Suscripción cancelada"); reloadRefs();
 }
 
@@ -1012,7 +1016,7 @@ async function leerImport(file) {
   const box = $("pimpRes"); box.textContent = "Leyendo " + file.name + "…"; importar = null;
   let res;
   try {
-    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=16");
+    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=17");
     res = armarProductos(await leerPlanilla(file));
   } catch (e) {
     box.innerHTML = ""; const d = document.createElement("div"); d.className = "imp-err";
