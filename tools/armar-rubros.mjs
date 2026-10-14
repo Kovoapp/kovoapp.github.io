@@ -1,4 +1,4 @@
-// Arma las páginas por rubro (sitio/kiosco/, sitio/almacen/, ...) y el sitemap.
+// Arma las páginas por rubro (sitio/kiosco/, sitio/almacen/, ...). Después: node tools/armar-sitemap.mjs
 // Uso: node tools/armar-rubros.mjs   (después de cambiar los textos de abajo)
 import { writeFile, mkdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
@@ -154,7 +154,7 @@ function pagina(r) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="../estilo.css?v=1">
+<link rel="stylesheet" href="../estilo.css?v=2">
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
 </head>
 <body>
@@ -235,7 +235,7 @@ ${faq.map(([q, a]) => `    <details><summary>${esc(q)}</summary><p>${esc(a)}</p>
   <div class="wrap">
     <a class="marca" href="../"><img src="../icons/icon.svg" alt="">Kovo</a>
     <span>La caja de tu negocio, en el celular.</span>
-    <span style="margin-left:auto;display:flex;gap:16px"><a class="wa" href="#" target="_blank" rel="noopener">WhatsApp</a><a href="../app/">Entrar</a></span>
+    <span style="margin-left:auto;display:flex;gap:16px"><a href="../guias/">Guías</a><a class="wa" href="#" target="_blank" rel="noopener">WhatsApp</a><a href="../app/">Entrar</a></span>
   </div>
 </footer>
 
@@ -255,13 +255,5 @@ for (const r of RUBROS) {
   await mkdir(join(SITIO, r.slug), { recursive: true });
   await writeFile(join(SITIO, r.slug, "index.html"), pagina(r));
 }
-const hoy = new Date().toISOString().slice(0, 10);
-await writeFile(join(SITIO, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>${URL}</loc><lastmod>${hoy}</lastmod></url>
-${RUBROS.map(r => `  <url><loc>${URL}${r.slug}/</loc><lastmod>${hoy}</lastmod></url>`).join("\n")}
-</urlset>
-`);
-await writeFile(join(SITIO, "robots.txt"), `User-agent: *\nDisallow: /app/\nSitemap: ${URL}sitemap.xml\n`);
 // Para la página principal: la lista de rubros.
 console.log(RUBROS.map(r => `<a class="rubro" href="${r.slug}/"><b>${r.nombre}</b><span>${r.dolores[0][0]}</span></a>`).join("\n"));
