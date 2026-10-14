@@ -96,17 +96,25 @@ for (const [w, h, scheme] of [[390, 844, "light"], [1100, 900, "dark"]]) {
   check(await page.isHidden("#cfgbox") && !(await page.isHidden("#balance")), "el botón atrás vuelve a la caja");
   await page.click("#cfg"); await page.click("#cfgBack");
   check(await page.isHidden("#cfgbox"), "la flecha de Ajustes vuelve a la caja");
-  check(await page.isHidden("#adminCard"), "un negocio común no ve la administración de la app");
-  // El dueño de la app ve la administración y crea códigos de alta
+  check(await page.isHidden("#adm"), "un negocio común no ve el botón del panel de administración");
+  // El dueño de la app tiene su panel en una pantalla aparte
   await page.evaluate(() => window.__SB__.__db.platform_admins.push({ user_id: "u-ana@dietetica.com" }));
   await page.click("#cfg"); await page.click("#cbizSave");
-  await page.waitForSelector("#adminCard:not([hidden])");
-  check((await page.textContent("#adminBiz")).includes("Dietética Ana"), "el administrador ve la lista de negocios");
+  await page.waitForSelector("#adm:not([hidden])");
+  check(!(await page.$eval("#cfgbox", e => e.contains(document.getElementById("adminBiz")))), "el panel no está dentro de Ajustes");
+  await page.click("#adm");
+  await page.waitForFunction(() => document.getElementById("adminBiz").textContent.includes("Dietética Ana"));
+  check(await page.isHidden("#cfgbox") && !(await page.isHidden("#adminbox")) && await page.isHidden("#tabs"), "el panel se abre como pantalla aparte");
+  check(true, "el administrador ve la lista de negocios");
+  check((await page.textContent("#adminFiltro")).includes("En prueba (1)"), "y los filtra por estado: pagando, en prueba, vencidos, gratis");
   await page.fill("#adminNote", "Dietética Sol"); await page.click("#adminNew");
   await page.waitForFunction(() => document.getElementById("adminCodes").textContent.includes("Dietética Sol"));
   check(true, "el administrador crea un código de alta");
   await snap("7-admin");
+  await page.goBack();
+  check(await page.isHidden("#adminbox") && !(await page.isHidden("#tabs")), "el botón atrás cierra el panel");
   // Mi plan: prueba, suscripción y vencimiento
+  await page.click("#cfg");
   check((await page.textContent("#planEstado")).includes("Prueba gratis: quedan 7 días") && (await page.textContent("#planDetalle")).includes("$15.000 el primer mes y después $18.000"), "Mi plan muestra la prueba y el precio: $15.000 el primer mes y después $18.000");
   await page.click("#planBtn");
   await page.waitForFunction(() => window.__SB__.__db.fn_calls.length === 1);
@@ -115,10 +123,24 @@ for (const [w, h, scheme] of [[390, 844, "light"], [1100, 900, "dark"]]) {
   await page.click("#cbizSave");
   await page.waitForFunction(() => document.getElementById("planEstado").textContent === "Plan vencido");
   check(await page.isDisabled("#enviar") && await page.$eval("#bloqueo", e => !e.hidden && e.textContent.includes("vencido")), "con el plan vencido no deja anotar ventas y avisa por qué");
+  await page.click("#adm");
+  await page.waitForFunction(() => document.getElementById("adminFiltro").textContent.includes("Vencidos (1)"));
   await page.click("#adminBiz .linkbtn"); await page.click(".ov .chip.on");
   await page.waitForFunction(() => document.getElementById("planEstado").textContent === "Acceso sin cargo");
   check(!(await page.isDisabled("#enviar")), "el administrador puede dar acceso gratis");
+  await page.click("#admBack");
+  // Ver la app como cajero y volver
+  await page.click("#cfg");
+  await page.click("#vistaChips .chip:nth-child(2)");
+  await page.waitForSelector("#vistaBanner:not([hidden])");
+  check(await page.isHidden("#tabs") && await page.isHidden("#cfgbox") && !(await page.isHidden("#venta")), "el dueño puede ver la app como la ve un cajero");
+  await page.click("#cfg");
+  check(await page.$$eval("#cfgbox .card.mgr", cs => cs.every(c => c.hidden)) && !(await page.isHidden("#vistaCard")), "como cajero, Ajustes no muestra lo del dueño pero deja volver");
   await page.click("#cfgBack");
+  await snap("8-vista-cajero");
+  await page.click("#vistaVolver");
+  await page.waitForSelector("#vistaBanner", { state: "hidden" });
+  check(!(await page.isHidden("#tabs")), "y volver a verla como dueño");
 
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   check(!wide, `sin scroll horizontal a ${w}px`);
