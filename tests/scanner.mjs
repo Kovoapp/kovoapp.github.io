@@ -45,7 +45,7 @@ const server = createServer(async (req, res) => {
   catch { res.writeHead(404); res.end() }
 }).listen(0);
 const base = `http://localhost:${server.address().port}/`;
-const mock = await readFile(join(root, "tests/mock-supabase.js"), "utf8");
+const mock = (await readFile(join(root, "js/memoria.js"), "utf8")) + "\nwindow.__SB__ = crearMemoria();";
 
 const { code, bits } = ean13("779123456789");
 const video = await makeVideo(bits);

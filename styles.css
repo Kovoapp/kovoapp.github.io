@@ -202,3 +202,8 @@ textarea:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px var(--ac
 .gan .gtot{font-weight:700;font-size:18px;border-top:1px solid var(--bd);padding-top:8px}
 .note.vista{background:var(--ac2);color:var(--tx);margin-bottom:14px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
 .note.vista .linkbtn{padding:2px 0;font-size:14px}
+
+/* Demo con datos de ejemplo */
+.demo-aviso{background:var(--ac);color:#fff;font-size:14px;line-height:1.4;padding:10px 16px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;justify-content:center;text-align:center}
+.demo-aviso a{color:#fff;font-weight:700}
+.demo #planCard,.demo #trialBanner{display:none!important}

@@ -1,10 +1,10 @@
-// Cliente de Supabase falso, en memoria, para probar la interfaz sin servidor.
+// Cliente de Supabase falso, en memoria: lo usan las pruebas y la demo (app/?demo).
 // No aplica permisos: eso se prueba aparte en supabase/tests.
-(() => {
+window.crearMemoria = (opciones = {}) => {
   const uuid = () => crypto.randomUUID();
   const db = { businesses: [], members: [], shops: [], payment_methods: [], clients: [], providers: [], products: [], sales: [], expenses: [], openings: [], invites: [], product_costs: [], sale_costs: [], suggestions: [], platform_admins: [], platform_settings: [{ id: 1, founder_price: 15000, regular_price: 18000, founder_slots: 10 }], fn_calls: [],
     signup_codes: [{ code: "PRUEBA01", note: "", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 30 * 864e5).toISOString(), used_by: null }] };
-  let session = null; const listeners = [];
+  let session = opciones.session || null; const listeners = [];
   const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") };
   const defaults = {
     businesses: () => ({ id: uuid(), ticket_footer: "¡Gracias por su compra!", plan: "trial", trial_ends_at: new Date(Date.now() + 7 * 864e5).toISOString(), created_at: new Date().toISOString() }),
@@ -51,7 +51,7 @@
     then(res, rej) { try { res(this.run()) } catch (e) { rej(e) } }
   }
   const emit = (ev) => listeners.forEach(f => f(ev, session));
-  window.__SB__ = {
+  return {
     __db: db,
     from: t => new Q(t),
     rpc: async (name, a) => {
@@ -109,4 +109,4 @@
     functions: { invoke: async (name, { body }) => { db.fn_calls.push({ name, body }); return body.action === "cancelar" ? { data: { ok: true }, error: null } : { data: { init_point: "javascript:void(0)" }, error: null } } },
     channel: () => ({ on() { return this }, subscribe() { return this } })
   };
-})();
+};
