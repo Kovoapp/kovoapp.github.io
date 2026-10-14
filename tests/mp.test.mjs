@@ -6,9 +6,9 @@ const fails = [];
 const check = (ok, msg) => { console.log((ok ? "ok   " : "FAIL ") + msg); if (!ok) fails.push(msg) };
 const env = { SUPABASE_URL: "https://x.supabase.co", SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: "sb_secret_x", MP_ACCESS_TOKEN: "TEST-123" };
 
-function falso({ rol = "owner", trial = Date.now() + 5 * 864e5, pre = {}, cuota = {}, intro = false } = {}) {
+function falso({ rol = "owner", trial = Date.now() + 5 * 864e5, pre = {}, cuota = {}, intro = false, preId = "pre-9" } = {}) {
   const calls = [];
-  const biz = { id: "b1", name: "Dietética Ana", trial_ends_at: new Date(trial).toISOString(), mp_preapproval_id: "pre-9", mp_status: "authorized" };
+  const biz = { id: "b1", name: "Dietética Ana", trial_ends_at: new Date(trial).toISOString(), mp_preapproval_id: preId, mp_status: "authorized" };
   const fetch = async (url, opts = {}) => {
     const body = opts.body ? JSON.parse(opts.body) : null;
     calls.push({ url, method: opts.method || "GET", body, headers: opts.headers });
@@ -58,11 +58,17 @@ const llamado = (calls, fin) => calls.find(c => c.url.endsWith(fin));
   check(out.status === 401, "sin sesión no hace nada");
 }
 { // Cancelar
-  const f = falso({ pre: { status: "cancelled" } });
-  const out = await crearSuscripcion({ env, fetch: f.fetch, authHeader: "Bearer buena", body: { business_id: "b1", action: "cancelar" } });
+  let f = falso();
+  let out = await crearSuscripcion({ env, fetch: f.fetch, authHeader: "Bearer buena", body: { business_id: "b1", action: "cancelar" } });
   const put = f.calls.find(c => c.method === "PUT");
   check(out.status === 200 && put && put.url.endsWith("/preapproval/pre-9") && put.body.status === "cancelled", "cancela la suscripción en Mercado Pago");
   check(llamado(f.calls, "/rpc/mp_apply").body.p_status === "cancelled", "y lo anota en el negocio");
+  f = falso({ pre: { status: "cancelled" } });
+  out = await crearSuscripcion({ env, fetch: f.fetch, authHeader: "Bearer buena", body: { business_id: "b1", action: "cancelar" } });
+  check(out.status === 200 && !f.calls.some(c => c.method === "PUT") && llamado(f.calls, "/rpc/mp_apply").body.p_status === "cancelled", "si ya estaba cancelada en Mercado Pago, solo la anota");
+  f = falso({ preId: "123456" });
+  out = await crearSuscripcion({ env, fetch: f.fetch, authHeader: "Bearer buena", body: { business_id: "b1", action: "cancelar" } });
+  check(out.status === 200 && !f.calls.some(c => c.method === "PUT") && llamado(f.calls, "/rpc/mp_apply").body.p_status === "cancelled", "si la suscripción no existe en esta cuenta (era de prueba), la da por cancelada");
 }
 { // Revisar el estado sin esperar el aviso
   let f = falso();
