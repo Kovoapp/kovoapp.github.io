@@ -38,7 +38,7 @@
       <h1>Tu celular es la caja de tu negocio.</h1>
       <p class="sub">Anotá cada venta, escaneá los códigos con la cámara, controlá el stock y cerrá la caja del día sin cuadernos ni planillas.</p>
       <div class="ctas">
-        <a class="btn pri wa" href="#" target="_blank" rel="noopener">Probá 7 días gratis</a>
+        <a class="btn pri" href="app/?registro">Probá 7 días gratis</a>
         <a class="btn sec" href="app/?demo">Ver la demo</a>
       </div>
       <p class="tranqui">La demo abre sin registrarte, con un negocio de ejemplo · La prueba es sin tarjeta y sin contrato</p>
@@ -158,16 +158,16 @@
         <li>Todas las funciones</li>
         <li>Ayuda por WhatsApp</li>
       </ul>
-      <a class="btn pri wa" href="#" target="_blank" rel="noopener">Probá 7 días gratis</a>
+      <a class="btn pri" href="app/?registro">Probá 7 días gratis</a>
     </div>
   </section>
 
   <section>
     <h2>Cómo empezar</h2>
     <div class="pasos">
-      <div class="paso"><h3>Escribinos</h3><p>Mandanos un WhatsApp y contanos de tu negocio.</p></div>
-      <div class="paso"><h3>Recibí tu código</h3><p>Te pasamos un código de alta para crear tu cuenta.</p></div>
-      <div class="paso"><h3>Empezá a vender</h3><p>Cargás tus locales y en un minuto ya estás anotando ventas.</p></div>
+      <div class="paso"><h3>Creá tu cuenta</h3><p>Con tu email y una contraseña. No te pedimos tarjeta.</p></div>
+      <div class="paso"><h3>Armá tu negocio</h3><p>Ponés el nombre, tus locales y los medios de pago que aceptás.</p></div>
+      <div class="paso"><h3>Empezá a vender</h3><p>En un minuto ya estás anotando ventas. Tenés 7 días gratis para probar.</p></div>
     </div>
   </section>
 
@@ -186,6 +186,7 @@
     <details><summary>¿Tengo que instalar algo?</summary><p>No. Kovo funciona desde el navegador del celular, la tablet o la compu. Si querés, lo podés agregar a la pantalla de inicio y se abre como una app.</p></details>
     <details><summary>¿Necesito internet?</summary><p>Para vender, no: si se corta, seguís anotando ventas y se guardan en el celular. Cuando vuelve la conexión se suben solas. Para ver el resumen y el balance sí hace falta, y alcanza con los datos del celular.</p></details>
     <details><summary>¿Qué pasa cuando terminan los 7 días de prueba?</summary><p>Si te suscribís, seguís igual. Si no, la caja deja de anotar ventas nuevas, pero tus datos quedan guardados por si volvés.</p></details>
+    <details><summary>¿Puedo anotar lo que fío?</summary><p>Sí. Activás el fiado en Ajustes y aparece como un medio de pago más: anotás a quién le fiaste y Kovo te muestra cuánto te debe cada cliente. Cuando te paga, lo anotás y se descuenta. Si no fiás, lo dejás apagado y no molesta.</p></details>
     <details><summary>¿Cómo pago?</summary><p>Con Mercado Pago, de forma automática todos los meses. Podés usar tarjeta o el dinero de tu cuenta.</p></details>
     <details><summary>¿Puedo cancelar cuando quiera?</summary><p>Sí. Cancelás desde Ajustes → Mi plan y seguís usando Kovo hasta el final del mes que ya pagaste. No hay contrato.</p></details>
     <details><summary>¿Hace factura electrónica de ARCA?</summary><p>Todavía no. Kovo anota las ventas e imprime tickets no fiscales.</p></details>
@@ -196,7 +197,7 @@
     <h2>Probá Kovo en tu negocio</h2>
     <p class="mu">7 días gratis. Sin tarjeta, sin contrato.</p>
     <div class="ctas" style="justify-content:center">
-      <a class="btn pri wa" href="#" target="_blank" rel="noopener">Probá 7 días gratis</a>
+      <a class="btn pri" href="app/?registro">Probá 7 días gratis</a>
       <a class="btn sec" href="app/?demo">Ver la demo</a>
     </div>
   </section>
@@ -213,7 +214,7 @@
 
 <script>
   const tel = "5493329593188";
-  const msg = "Hola, quiero probar Kovo en mi negocio. ¿Me pasan un código de alta?";
+  const msg = "Hola, tengo una consulta sobre Kovo.";
   document.querySelectorAll("a.wa").forEach(a => a.href = "https://wa.me/" + tel + "?text=" + encodeURIComponent(msg));
   const h = document.getElementById("top");
   addEventListener("scroll", () => h.classList.toggle("sombra", scrollY > 8), { passive: true });

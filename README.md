@@ -21,7 +21,7 @@ Hace falta una cuenta gratis en [Supabase](https://supabase.com) (la base de dat
 
 1. Entrá a [supabase.com](https://supabase.com), creá una cuenta y un proyecto nuevo. Elegí la región São Paulo para que ande rápido desde Argentina.
 2. En el proyecto, abrí **SQL Editor**, pegá todo el contenido de [`supabase/schema.sql`](supabase/schema.sql) y tocá **Run**.
-   Si ya lo habías corrido antes, corré también [`supabase/stock.sql`](supabase/stock.sql), [`supabase/alta.sql`](supabase/alta.sql), [`supabase/pagos.sql`](supabase/pagos.sql), [`supabase/costos.sql`](supabase/costos.sql) y [`supabase/pago-mes.sql`](supabase/pago-mes.sql) (se pueden correr las veces que quieras).
+   Si ya lo habías corrido antes, corré también [`supabase/stock.sql`](supabase/stock.sql), [`supabase/alta.sql`](supabase/alta.sql), [`supabase/pagos.sql`](supabase/pagos.sql), [`supabase/costos.sql`](supabase/costos.sql), [`supabase/pago-mes.sql`](supabase/pago-mes.sql), [`supabase/registro.sql`](supabase/registro.sql) y [`supabase/fiado.sql`](supabase/fiado.sql) (se pueden correr las veces que quieras).
    Si aparece el error `relation "businesses" already exists`, ya se había corrido antes. En una base nueva, corré [`supabase/reset.sql`](supabase/reset.sql) y después `schema.sql` otra vez.
 3. Abrí **Project Settings → API** y copiá dos datos: **Project URL** y **anon public key**.
 4. Pegalos en [`js/config.js`](js/config.js) (se puede editar directo en GitHub con el lápiz).
@@ -36,15 +36,15 @@ La "anon key" es pública por diseño. Lo que protege los datos son las reglas d
 
 ### 3. Vos como administrador
 
-Para crear un negocio hace falta un **código de alta** que das vos. Creá tu cuenta en la página y después, en el SQL Editor de Supabase, corré esto con tu email:
+Cualquiera puede crear su cuenta y un negocio con 7 días de prueba. Los **códigos de alta** son opcionales: sirven para que alguien cree más de un negocio o para saber de dónde vino cada cliente. Para administrar, creá tu cuenta en la página y después, en el SQL Editor de Supabase, corré esto con tu email:
 
 ```sql
 insert into public.platform_admins (user_id) select id from auth.users where email = 'tu@email.com';
 ```
 
-Desde ahí vas a ver **Ajustes → Administración de la app**: cuántos usuarios y negocios hay, y el botón para crear códigos de alta. Vos podés crear tu propio negocio sin código.
+Desde ahí vas a ver **Ajustes → Administración de la app**: cuántos usuarios y negocios hay, y el botón para crear códigos de alta. Vos podés crear todos los negocios que quieras sin código.
 
-En [`js/config.js`](js/config.js) completá tu WhatsApp o email para que el botón "Escribinos" de la página les llegue a vos.
+En [`js/config.js`](js/config.js) completá tu WhatsApp o email para que el botón "Escribinos" (para dudas) les llegue a vos.
 
 ### 4. Probar
 

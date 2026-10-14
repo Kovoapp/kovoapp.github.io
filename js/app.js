@@ -32,7 +32,11 @@ function errMsg(e) {
   if (/already registered|already exists/i.test(m)) return "Ya hay una cuenta con ese email. Probá con Entrar.";
   if (/password should be at least|weak/i.test(m)) return "La contraseña tiene que tener al menos 8 caracteres.";
   if (/email not confirmed/i.test(m)) return "Confirmá tu email: te mandamos un link a tu casilla.";
-  if (/invalid_signup_code/.test(m)) return "Ese código de alta no existe, ya se usó o venció. Escribinos para pedir uno.";
+  if (/invalid_signup_code/.test(m)) return "Ese código de alta no existe, ya se usó o venció. Si no tenés uno, dejalo vacío.";
+  if (/already_owner/.test(m)) return "Tu cuenta ya tiene un negocio. Para crear otro, escribinos y te pasamos un código.";
+  if (/fiado_sin_cliente/.test(m)) return "Para fiar, escribí el nombre del cliente.";
+  if (/foreign key|23503/i.test(m)) return "No se puede quitar: tiene fiado anotado. Primero tiene que quedar en cero.";
+  if (/fiado/.test(m) && /column|schema cache|PGRST204|does not exist/i.test(m)) return "Falta actualizar la base de datos para usar el fiado (supabase/fiado.sql).";
   if (/invalid_invite/.test(m)) return "Ese código no existe, ya se usó o venció. Pedí uno nuevo.";
   if (/duplicate key|unique/i.test(m)) return "Ya existe uno con ese nombre o código.";
   return "Algo salió mal. Probá de nuevo en un momento.";
@@ -109,13 +113,19 @@ function downloadCsv(name, rows) {
 // ---------------------------------------------------------------
 let sb = null, user = null;
 let biz = null, role = null, members = [];
-let shops = [], pays = [], clientes = [], provs = [], catalog = [], costs = {};
+let shops = [], pays = [], clientes = [], provs = [], catalog = [], costs = {}, fiados = [];
 const isMgr = () => role === "owner" || role === "admin";
 const activeShops = () => shops.filter(s => s.active);
 const retailShops = () => activeShops().filter(s => s.kind === "retail");
 const shopName = id => (shops.find(s => s.id === id) || {}).name || "Sin local";
 const isWholesale = id => (shops.find(s => s.id === id) || {}).kind === "wholesale";
 const payNames = wholesale => pays.filter(p => p.active && (!wholesale || p.wholesale)).map(p => p.name);
+// Fiado es un medio de pago más cuando el negocio lo activa en Ajustes. En los resúmenes sale si hay ventas fiadas.
+const pagosVenta = (wholesale, lista) => {
+  const l = payNames(wholesale);
+  if (!l.includes("Fiado") && ((biz && biz.fiado) || (lista || []).some(x => x.payment === "Fiado"))) l.push("Fiado");
+  return l;
+};
 
 function show(screen) {
   ["auth", "setup", "app"].forEach(s => { $("screen-" + s).hidden = s !== screen });
@@ -131,6 +141,7 @@ function authMode(s) {
 }
 $("tabLogin").onclick = () => authMode(false);
 $("tabSignup").onclick = () => authMode(true);
+if (/[?&]registro\b/.test(location.search)) authMode(true);
 $("authForm").onsubmit = async e => {
   e.preventDefault();
   const email = $("aemail").value.trim(), password = $("apass").value;
@@ -179,8 +190,8 @@ function renderSPays() {
 $("saddShop").onclick = () => { shopInput(); $("sshops").lastChild.querySelector("input").focus() };
 $("spayAdd").onclick = () => { const v = $("spayNew").value.trim(); if (!v) return; if (!sPayAll.includes(v)) sPayAll.push(v); if (!sPays.includes(v)) sPays.push(v); $("spayNew").value = ""; renderSPays() };
 $("spayNew").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); $("spayAdd").click() } };
-// Links de contacto para pedir un código de alta (se configuran en js/config.js)
-const msgContacto = "Hola, quiero usar Kovo en mi negocio. ¿Me pasan un código de alta?";
+// Links de contacto para consultas (se configuran en js/config.js)
+const msgContacto = "Hola, tengo una consulta sobre Kovo.";
 const urlContacto = CONTACTO_WHATSAPP ? "https://wa.me/" + CONTACTO_WHATSAPP.replace(/\D/g, "") + "?text=" + encodeURIComponent(msgContacto)
   : CONTACTO_EMAIL ? "mailto:" + CONTACTO_EMAIL + "?subject=" + encodeURIComponent("Código de alta") + "&body=" + encodeURIComponent(msgContacto) : "";
 document.querySelectorAll("a.contacto").forEach(a => { if (urlContacto) a.href = urlContacto; else a.replaceWith(a.textContent) });
@@ -191,13 +202,12 @@ $("newForm").onsubmit = async e => {
   const name = $("sname").value.trim(), owner = $("sowner").value.trim();
   const shopList = [...$("sshops").querySelectorAll("input")].map(i => i.value.trim()).filter(Boolean);
   const codigo = $("scodigo").value.trim();
-  if (!codigo) return say("smsg", "Escribí el código de alta que te dimos.", true);
   if (!name) return say("smsg", "Escribí el nombre del negocio.", true);
   if (!shopList.length) return say("smsg", "Agregá al menos un local.", true);
   if (!sPays.length) return say("smsg", "Elegí al menos un medio de pago.", true);
   $("screate").disabled = true;
   const ordered = sPayAll.filter(p => sPays.includes(p));
-  const { data, error } = await sb.rpc("create_business", { p_name: name, p_owner_name: owner, p_shops: shopList, p_wholesale: $("swhole").checked, p_payments: ordered, p_code: codigo });
+  const { data, error } = await sb.rpc("create_business", { p_name: name, p_owner_name: owner, p_shops: shopList, p_wholesale: $("swhole").checked, p_payments: ordered, p_code: codigo || null });
   $("screate").disabled = false;
   if (error) return say("smsg", errMsg(error), true);
   store.set("biz", data); await enter();
@@ -347,26 +357,28 @@ async function cancelarSuscripcion() {
 
 async function loadRefs(b) {
   const q = t => sb.from(t).select("*").eq("business_id", b);
-  const [bz, sh, pm, cl, pv, pr, mb, pc, adm] = await Promise.all([
+  const [bz, sh, pm, cl, pv, pr, mb, pc, adm, fd] = await Promise.all([
     sb.from("businesses").select("*").eq("id", b).single(),
     q("shops").order("position"), q("payment_methods").order("position"),
     q("clients").order("name"), isMgr() ? q("providers").order("name") : Promise.resolve({ data: [] }),
     q("products").order("name"), q("members").order("created_at"),
     isMgr() ? q("product_costs") : Promise.resolve({ data: [] }),
-    sb.rpc("is_platform_admin")
+    sb.rpc("is_platform_admin"),
+    q("fiados").order("created_at", { ascending: false })
   ]);
   if (bz.error && sinRed(bz.error) && cajaGuardada(b)) return;
   $("adm").hidden = !(adm && adm.data);
   biz = bz.data; shops = sh.data || []; pays = pm.data || []; clientes = cl.data || []; provs = pv.data || []; catalog = pr.data || []; members = mb.data || [];
+  fiados = (fd && !fd.error && fd.data) || [];
   costs = {}; (pc.data || []).forEach(c => costs[c.product_id] = num(c.cost));
   if (biz) guardarCaja();
 }
 // Lo último que se cargó queda en el celular, para poder abrir la caja y vender sin internet.
-function guardarCaja() { store.set("cajaGuardada", JSON.stringify({ uid: user.id, role: realRole, biz, shops, pays, clientes, provs, catalog, members, costs })) }
+function guardarCaja() { store.set("cajaGuardada", JSON.stringify({ uid: user.id, role: realRole, biz, shops, pays, clientes, provs, catalog, members, costs, fiados })) }
 function cajaGuardada(b) {
   let c = null; try { c = JSON.parse(store.get("cajaGuardada", "null")) } catch (e) { }
   if (!c || c.uid !== user.id || !c.biz || (b && c.biz.id !== b)) return null;
-  ({ biz, shops, pays, clientes, provs, catalog, members, costs } = c);
+  ({ biz, shops, pays, clientes, provs, catalog, members, costs } = c); fiados = c.fiados || [];
   return c;
 }
 
@@ -385,7 +397,7 @@ async function subirPendientes() {
     guardarPend(pendientes().filter(x => x.id !== row.id)); subidas++;
   }
   subiendo = false; pintaRed();
-  if (subidas) { toast("Listo: se " + (subidas === 1 ? "subió 1 venta anotada" : "subieron " + subidas + " ventas anotadas") + " sin internet"); if (isMgr()) refresh() }
+  if (subidas) { toast("Listo: se " + (subidas === 1 ? "subió 1 venta anotada" : "subieron " + subidas + " ventas anotadas") + " sin internet"); if (isMgr()) refresh(); if (biz && biz.fiado) cargarFiado() }
   if (error && !sinRed(error) && !avisoSubida) {
     avisoSubida = true;
     aviso("Hay " + plural(pendientes().length, "venta") + " anotadas sin internet que no se pudieron subir. " + errMsg(error) + " Quedan guardadas en este celular.");
@@ -412,7 +424,7 @@ function startApp() {
   $$(".owner-only").forEach(e => e.hidden = role !== "owner");
   pintaPlan(); pintaVista(); cargarAlertas(); subirPendientes();
   if (!activeShops().find(s => s.id === local)) local = (activeShops()[0] || {}).id;
-  renderLocales(); renderPagos(); renderCart(); renderClientes(); renderCatalog(); renderSettings(); pintaUndo();
+  renderLocales(); renderPagos(); renderCart(); renderClientes(); renderCatalog(); renderSettings(); pintaUndo(); pintaFiado();
   if (!started) { started = true; wireOnce() }
 }
 
@@ -428,14 +440,24 @@ function renderLocales() {
 }
 function onLocal(quiet) {
   const may = isWholesale(local);
-  $("cliwrap").hidden = !may; $("prodwrap").hidden = may;
+  $("prodwrap").hidden = may;
   if (may && cart.length && !quiet) { cart = []; renderCart(); sync() }
   renderPagos();
 }
 function renderPagos() {
-  const vis = payNames(isWholesale(local));
+  const vis = pagosVenta(isWholesale(local));
   if (!vis.includes(pago)) pago = vis[0];
-  chips($("pagos"), vis, () => pago, v => { pago = v; calc() }); calc();
+  chips($("pagos"), vis, () => pago, v => { pago = v; calc(); pintaCli() }); calc(); pintaCli();
+}
+// El cliente se pide en el local mayorista y cuando se fía.
+function pintaCli() {
+  const fiar = pago === "Fiado";
+  $("cliwrap").hidden = !(isWholesale(local) || fiar);
+  $("cbus").placeholder = fiar ? "¿A quién le fiás?" : "Buscar o elegir cliente...";
+  $("mnuevo").parentElement.hidden = fiar && !isWholesale(local); // para fiar alcanza con escribir el nombre
+  const n = $("cbus").value.trim(), d = fiar && n ? saldos()[n] || 0 : 0;
+  $("cdeuda").hidden = !(d > 0);
+  if (d > 0) $("cdeuda").innerHTML = "Ya debe <b>" + fmt(d) + "</b>";
 }
 function calc() {
   const m = parseFloat($("monto").value) || 0, p = parseFloat($("paga").value) || 0;
@@ -502,18 +524,21 @@ async function anotarVenta() {
   }
   const may = isWholesale(local);
   if (may && !mcli) return say("msg", "Elegí un cliente de la lista.", true);
+  const fiar = pago === "Fiado", aQuien = $("cbus").value.trim();
+  if (fiar && !aQuien) { say("msg", "Escribí a quién le fiás.", true); $("cbus").focus(); return }
   $("enviar").disabled = true; $("imp").hidden = true;
-  const row = { id: crypto.randomUUID(), business_id: biz.id, shop_id: local, day: isoF("vfecha") || hoy(), client_name: may ? mcli : "", payment: pago, amount: monto, paid_with: efectivo ? pagaV : 0, items: cart.map(l => ({ id: l.id, name: l.name, qty: l.qty, unit: l.unit, price: l.price })) };
+  const row = { id: crypto.randomUUID(), business_id: biz.id, shop_id: local, day: isoF("vfecha") || hoy(), client_name: may ? mcli : fiar ? aQuien : "", payment: pago, amount: monto, paid_with: efectivo ? pagaV : 0, items: cart.map(l => ({ id: l.id, name: l.name, qty: l.qty, unit: l.unit, price: l.price })) };
   let { data, error } = navigator.onLine ? await sb.from("sales").insert(row).select().single() : { error: "sin internet" };
   // Sin internet la venta queda en el celular con su hora, y se sube después.
   const enCelu = !!error && sinRed(error);
   if (enCelu) { data = { ...row, created_at: new Date().toISOString() }; guardarPend([...pendientes(), data]); error = null }
   $("enviar").disabled = false;
   if (error) return say("msg", errMsg(error), true);
-  say("msg", enCelu ? "✓ Venta guardada en el celular" : "✓ Venta anotada"); moverStock(data.items, -1);
+  say("msg", enCelu ? "✓ Venta guardada en el celular" : fiar ? "✓ Fiado anotado a " + aQuien : "✓ Venta anotada"); moverStock(data.items, -1);
+  if (fiar) enCelu ? pintaFiado() : cargarFiado();
   last = data; $("imp").hidden = false;
   ultima = { id: data.id, amount: monto, shop: shopName(local), payment: pago, at: Date.now(), items: data.items }; store.set("ultimaVenta", JSON.stringify(ultima)); pintaUndo();
-  mcli = null; $("cbus").value = ""; $("cres").hidden = true; $("mdel").hidden = true;
+  mcli = null; $("cbus").value = ""; $("cres").hidden = true; $("mdel").hidden = true; pintaCli();
   cart = []; renderCart(); $("monto").value = ""; $("paga").value = ""; calc();
 }
 function pintaUndo() {
@@ -526,18 +551,18 @@ async function deshacer() {
   if (!ultima) return;
   if (!await ask("¿Eliminar la última venta: " + fmt(ultima.amount) + " en " + ultima.shop + " (" + ultima.payment + ")?")) return;
   if (pendientes().some(x => x.id === ultima.id)) {
-    guardarPend(pendientes().filter(x => x.id !== ultima.id)); say("msg", "Venta eliminada"); moverStock(ultima.items, 1);
+    guardarPend(pendientes().filter(x => x.id !== ultima.id)); say("msg", "Venta eliminada"); moverStock(ultima.items, 1); pintaFiado();
     ultima = null; last = null; store.del("ultimaVenta"); pintaUndo(); $("imp").hidden = true; return;
   }
   const { error, count } = await sb.from("sales").delete({ count: "exact" }).eq("id", ultima.id);
   if (error) return aviso(errMsg(error));
   if (count === 0) aviso("No se pudo eliminar: ya pasaron más de 15 minutos. Pedile al dueño que la borre desde Resumen.");
-  else { say("msg", "Venta eliminada"); moverStock(ultima.items, 1) }
+  else { say("msg", "Venta eliminada"); moverStock(ultima.items, 1); if (ultima.payment === "Fiado") cargarFiado() }
   ultima = null; last = null; store.del("ultimaVenta"); pintaUndo(); $("imp").hidden = true;
 }
 
 // Clientes mayoristas
-function syncCli() { const v = $("cbus").value.trim(); mcli = clientes.some(c => c.name === v) ? v : null; $("mdel").hidden = !(mcli && isMgr()) }
+function syncCli() { const v = $("cbus").value.trim(); mcli = clientes.some(c => c.name === v) ? v : null; $("mdel").hidden = !(mcli && isMgr()); if (biz) pintaCli() }
 function listaBox(box, list, query, onPick) {
   box.innerHTML = "";
   const m = list.filter(c => c.name.toLowerCase().includes(query));
@@ -547,6 +572,72 @@ function listaBox(box, list, query, onPick) {
 }
 function listaClis(all) { listaBox($("cres"), clientes, all ? "" : $("cbus").value.trim().toLowerCase(), c => { $("cbus").value = c.name; $("cres").hidden = true; syncCli() }) }
 function renderClientes() { syncCli(); if (!$("cres").hidden) listaClis(false) }
+
+// ---------------------------------------------------------------
+// Fiado: lo que cada cliente se llevó sin pagar y lo que fue pagando
+// ---------------------------------------------------------------
+// Cuánto debe cada cliente (por nombre). Suma también lo fiado sin internet que todavía no se subió.
+function saldos() {
+  const m = {}, nom = id => (clientes.find(c => c.id === id) || {}).name || "Cliente borrado";
+  fiados.forEach(f => { const n = nom(f.client_id); m[n] = (m[n] || 0) + (f.kind === "pago" ? -1 : 1) * num(f.amount) });
+  pendientes().filter(x => x.payment === "Fiado" && x.client_name).forEach(x => { m[x.client_name] = (m[x.client_name] || 0) + num(x.amount) });
+  return m;
+}
+async function cargarFiado() {
+  const [cl, fd] = await Promise.all([sb.from("clients").select("*").eq("business_id", biz.id).order("name"),
+    sb.from("fiados").select("*").eq("business_id", biz.id).order("created_at", { ascending: false })]);
+  if (!cl.error) clientes = cl.data || [];
+  if (!fd.error) fiados = fd.data || [];
+  guardarCaja(); pintaFiado(); syncCli();
+}
+let fdCli = null, fdPago = null;
+function pintaFiado() {
+  const usa = !!(biz && biz.fiado);
+  $("fiadoCard").hidden = !usa && !fiados.length;
+  if ($("fiadoCard").hidden) return;
+  const m = saldos(), deben = Object.keys(m).filter(n => m[n] > 0.5).sort((a, b) => m[b] - m[a]);
+  $("fdTotal").textContent = fmt(deben.reduce((a, n) => a + m[n], 0));
+  const t = $("fdLista"); t.innerHTML = "";
+  if (!deben.length) emptyRow(t, usa ? "Nadie te debe nada. Para fiar, elegí Fiado como medio de pago." : "Nadie te debe nada.");
+  deben.forEach(n => {
+    const tr = document.createElement("tr"), c3 = td(), cli = clientes.find(c => c.name === n);
+    if (cli) { const b = document.createElement("button"); b.type = "button"; b.className = "chip camb"; b.textContent = "Cobrar"; b.onclick = () => abrirCobro(cli, m[n]); c3.appendChild(b) }
+    tr.append(td(n), td(fmt(m[n]), "n"), c3); t.appendChild(tr);
+  });
+  const mv = $("fdMov"); mv.innerHTML = "";
+  if (!fiados.length) emptyRow(mv, "Todavía no hay movimientos");
+  fiados.slice(0, 20).forEach(f => {
+    const tr = document.createElement("tr"), c3 = td(), cli = clientes.find(c => c.id === f.client_id);
+    const txt = toAR(f.day) + " · " + (cli ? cli.name : "Cliente borrado") + " · " + (f.kind === "pago" ? "pagó" + (f.payment ? " (" + f.payment + ")" : "") : "fiado");
+    const v = td((f.kind === "pago" ? "-" : "+") + fmt(f.amount), "n"); if (f.kind === "pago") v.style.color = "var(--ac)";
+    if (f.kind === "pago" && isMgr()) c3.appendChild(delBtn(() => borrarCobro(f), "Borrar pago"));
+    tr.append(td(txt), v, c3); mv.appendChild(tr);
+  });
+}
+function abrirCobro(cli, debe) {
+  fdCli = cli; $("fdNom").textContent = cli.name; $("fdMonto").value = Math.round(debe * 100) / 100; $("fdCobro").hidden = false; say("fdMsg", "");
+  const pn = payNames(false); if (!pn.includes(fdPago)) fdPago = pn[0];
+  chips($("fdPagos"), pn, () => fdPago, v => { fdPago = v });
+  $("fdMonto").focus();
+}
+async function anotarCobro() {
+  const amount = parseFloat($("fdMonto").value);
+  if (!fdCli) return;
+  if (!(amount > 0)) return say("fdMsg", "Escribí cuánto paga.", true);
+  if (!fdPago) return say("fdMsg", "Elegí cómo paga.", true);
+  $("fdOk").disabled = true;
+  const { error } = await sb.from("fiados").insert({ business_id: biz.id, client_id: fdCli.id, kind: "pago", amount, payment: fdPago, shop_id: local, day: hoy() });
+  $("fdOk").disabled = false;
+  if (error) return say("fdMsg", errMsg(error), true);
+  $("fdCobro").hidden = true; say("fdMsg", "✓ Pago de " + fdCli.name + " anotado"); fdCli = null;
+  await cargarFiado(); if (isMgr()) refresh();
+}
+async function borrarCobro(f) {
+  if (!await ask("¿Borrar este pago de " + fmt(f.amount) + "? Vuelve a sumarse a lo que debe.")) return;
+  const { error } = await sb.from("fiados").delete().eq("id", f.id);
+  if (error) return aviso(errMsg(error));
+  await cargarFiado(); refresh();
+}
 
 // ---------------------------------------------------------------
 // Ticket
@@ -648,6 +739,7 @@ async function compartirCierre() {
   const l = [`Cierre de caja · ${biz.name}`, f.charAt(0).toUpperCase() + f.slice(1), "", `Vendido: ${fmt(sum(ventas))} (${ventas.length} venta${ventas.length === 1 ? "" : "s"})`, `Ticket promedio: ${promedio(ventas)}`];
   const pagos = [...new Set(ventas.map(x => x.payment))].map(pg => [pg, ventas.filter(x => x.payment === pg)]);
   if (pagos.length) { l.push("", "Por medio de pago:"); pagos.forEach(([pg, v]) => l.push(`· ${pg}: ${fmt(sum(v))}`)) }
+  if (cobrosDia.length) l.push("", `Cobros de fiado: ${fmt(sum(cobrosDia))}`);
   const top = masVendidos(ventas).slice(0, 5);
   if (top.length) { l.push("", "Lo más vendido:"); top.forEach((x, i) => l.push(`${i + 1}. ${x.name} · ${fmtCant(x)} · ${fmt(x.total)}`)) }
   const txt = l.join("\n");
@@ -658,17 +750,18 @@ async function compartirCierre() {
 // ---------------------------------------------------------------
 // Resumen del día
 // ---------------------------------------------------------------
-let ventas = [], gastosDia = [], aper = [];
+let ventas = [], gastosDia = [], aper = [], cobrosDia = [];
 const abiertos = new Set(), abiertosRes = new Set(), abiertosProv = new Set();
 async function cargarResumen() {
   const dia = isoF("dia") || hoy();
-  const [s, e, o] = await Promise.all([
+  const [s, e, o, c] = await Promise.all([
     sb.from("sales").select("*").eq("business_id", biz.id).eq("day", dia).order("created_at", { ascending: false }),
     sb.from("expenses").select("*").eq("business_id", biz.id).eq("day", dia),
-    sb.from("openings").select("*").eq("business_id", biz.id).eq("day", dia)
+    sb.from("openings").select("*").eq("business_id", biz.id).eq("day", dia),
+    sb.from("fiados").select("*").eq("business_id", biz.id).eq("kind", "pago").eq("day", dia)
   ]);
   if (s.error) return aviso(errMsg(s.error));
-  ventas = s.data || []; gastosDia = e.data || []; aper = o.data || [];
+  ventas = s.data || []; gastosDia = e.data || []; aper = o.data || []; cobrosDia = (!c.error && c.data) || [];
   pintarResumen(); cargarAlertas();
 }
 function pintarResumen() {
@@ -684,12 +777,12 @@ function pintarResumen() {
   shown.forEach(l => {
     const vl = ventas.filter(x => x.shop_id === l.id), i = sum(vl), e = sum(sd.filter(x => x.shop_id === l.id)); ti += i; te += e;
     h += `<tr class="bs"><td><span>${btn(l.id)}${esc(l.name)}</span></td><td class="n" data-label="Ingresos">${fmt(i)}</td><td class="n" data-label="Egresos">${fmt(e)}</td><td class="n" data-label="Balance">${fs(i - e)}</td></tr>`;
-    if (abiertosRes.has(l.id)) payNames(l.kind === "wholesale").forEach(pg => { h += sub(pg, sum(vl.filter(x => x.payment === pg))) });
+    if (abiertosRes.has(l.id)) pagosVenta(l.kind === "wholesale", vl).forEach(pg => { h += sub(pg, sum(vl.filter(x => x.payment === pg))) });
   });
   const ge = sum(sd.filter(x => !x.shop_id)); te += ge;
   if (ge) h += `<tr class="bs"><td>Egresos generales</td><td class="n" data-label="Ingresos">$0</td><td class="n" data-label="Egresos">${fmt(ge)}</td><td class="n" data-label="Balance">${fs(-ge)}</td></tr>`;
   h += `<tr class="bh"><td><span>${btn("total")}Total del día</span></td><td class="n" data-label="Ingresos">${fmt(ti)}</td><td class="n" data-label="Egresos">${fmt(te)}</td><td class="n" data-label="Balance">${fs(ti - te)}</td></tr>`;
-  if (abiertosRes.has("total")) payNames(false).forEach(pg => { h += sub(pg, sum(ventas.filter(x => x.payment === pg))) });
+  if (abiertosRes.has("total")) pagosVenta(false, ventas).forEach(pg => { h += sub(pg, sum(ventas.filter(x => x.payment === pg))) });
   $("rdia").className = "bt"; $("rdia").innerHTML = h;
   $("rdia").querySelectorAll("button[data-k]").forEach(b => b.onclick = () => { const k = b.dataset.k; abiertosRes.has(k) ? abiertosRes.delete(k) : abiertosRes.add(k); pintarResumen() });
 
@@ -701,7 +794,7 @@ function pintarResumen() {
     hl.append(hb, document.createElement("br"), hs);
     const hv = document.createElement("span"); hv.className = "big"; hv.textContent = fmt(sum(vs)); head.append(hl, hv);
     const tb = document.createElement("table");
-    payNames(l.kind === "wholesale").forEach(pg => {
+    pagosVenta(l.kind === "wholesale", vs).forEach(pg => {
       const sp = vs.filter(x => x.payment === pg), key = l.id + "|" + pg, open = abiertos.has(key);
       const tr = document.createElement("tr");
       const c3 = td(); c3.style.width = "64px";
@@ -721,11 +814,12 @@ function pintarResumen() {
         cell.appendChild(inner); tr2.appendChild(cell); tb.appendChild(tr2);
       }
     });
-    const rl = retiros.filter(x => x.shop_id === l.id), ap = aper.find(x => x.shop_id === l.id);
-    if (rl.length || ap) {
-      const rt = sum(rl), ini = ap ? num(ap.amount) : 0, efe = sum(vs.filter(x => /efectivo/i.test(x.payment)));
+    const rl = retiros.filter(x => x.shop_id === l.id), ap = aper.find(x => x.shop_id === l.id), cl = cobrosDia.filter(x => x.shop_id === l.id);
+    if (rl.length || ap || cl.length) {
+      const rt = sum(rl), ini = ap ? num(ap.amount) : 0, efe = sum(vs.filter(x => /efectivo/i.test(x.payment))) + sum(cl.filter(x => /efectivo/i.test(x.payment)));
       const fila = (txt, val, color, cls) => { const r = document.createElement("tr"); if (cls) r.className = cls; const a = td(txt), b = td(val, "n"); if (color) { a.style.color = color; b.style.color = color } r.append(a, b, td()); tb.appendChild(r) };
       if (ap) fila("Caja inicial", "+" + fmt(ini));
+      if (cl.length) fila(`Cobros de fiado (${cl.length})`, "+" + fmt(sum(cl)), "var(--ac)");
       if (rl.length) fila(`Retiros de caja (${rl.length})`, "-" + fmt(rt), "var(--rd)");
       fila("Efectivo en caja", fmt(ini + efe - rt), null, "bs");
     }
@@ -899,7 +993,7 @@ function pintarBal() {
   };
   bc.push(["INGRESOS", "Total", ...R.map(l => l.name)]);
   let h = `<tr class="bh"><td>Ingresos</td><td class="n hd">Total</td>` + R.map(l => `<td class="n hd">${R.length > 1 ? esc(l.name) : ""}</td>`).join("") + "</tr>";
-  payNames(false).forEach(pg => { const v = shop.filter(x => x.payment === pg); h += row("Caja diaria – " + pg, sum(v), R.map(l => sum(v.filter(x => x.shop_id === l.id)))) });
+  pagosVenta(false, shop).forEach(pg => { const v = shop.filter(x => x.payment === pg); h += row("Caja diaria – " + pg, sum(v), R.map(l => sum(v.filter(x => x.shop_id === l.id)))) });
   const subtot = sum(shop);
   h += row("Subtotal caja diaria", subtot, R.map(l => sum(shop.filter(x => x.shop_id === l.id))), "bs");
   const may = sum(mayS);
@@ -950,7 +1044,7 @@ function pintarBal() {
 // ---------------------------------------------------------------
 let punit = "Unidad";
 function renderSettings() {
-  $("cbiz").value = biz.name; $("pie").value = biz.ticket_footer || "";
+  $("cbiz").value = biz.name; $("pie").value = biz.ticket_footer || ""; $("cfiado").checked = !!biz.fiado;
   chips($("anchos"), ["58 mm", "80 mm"], () => anchoTxt, v => { anchoTxt = v; store.set("ancho", v); aplicarAncho() });
   if (!isMgr()) return;
   // Locales
@@ -1190,7 +1284,7 @@ async function leerImport(file) {
   const box = $("pimpRes"); box.textContent = "Leyendo " + file.name + "…"; importar = null;
   let res;
   try {
-    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=21");
+    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=22");
     res = armarProductos(await leerPlanilla(file));
   } catch (e) {
     box.innerHTML = ""; const d = document.createElement("div"); d.className = "imp-err";
@@ -1453,6 +1547,15 @@ function wireOnce() {
     if (error) return aviso(errMsg(error));
     toast("Guardado"); reloadRefs();
   };
+  $("cfiado").onchange = async () => {
+    const on = $("cfiado").checked;
+    const { error } = await sb.from("businesses").update({ fiado: on }).eq("id", biz.id);
+    if (error) { $("cfiado").checked = !on; return aviso(errMsg(error)) }
+    toast(on ? "Fiado activado: ya aparece como medio de pago" : "Fiado desactivado"); reloadRefs();
+  };
+  $("fdOk").onclick = anotarCobro;
+  $("fdNo").onclick = () => { $("fdCobro").hidden = true; fdCli = null };
+  $("fdMonto").onkeydown = e => { if (e.key === "Enter") anotarCobro() };
   $("pieSave").onclick = async () => {
     const { error } = await sb.from("businesses").update({ ticket_footer: $("pie").value.trim() }).eq("id", biz.id);
     if (error) return aviso(errMsg(error));
@@ -1514,6 +1617,7 @@ function wireOnce() {
     let t = null;
     const bump = () => { clearTimeout(t); t = setTimeout(refresh, 400) };
     channel = sb.channel("caja-" + biz.id);
+    if (biz.fiado) channel.on("postgres_changes", { event: "*", schema: "public", table: "fiados", filter: "business_id=eq." + biz.id }, () => { bump(); cargarFiado() });
     ["sales", "expenses", "openings"].forEach(tb => channel.on("postgres_changes", { event: "*", schema: "public", table: tb, filter: "business_id=eq." + biz.id }, bump));
     channel.subscribe();
   }

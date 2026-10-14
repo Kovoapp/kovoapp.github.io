@@ -57,6 +57,7 @@ button{font-family:inherit}
 .sect{font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px}
 label{display:block;font-size:14px;font-weight:600;color:var(--tx);margin:16px 0 6px}
 label .opt{font-weight:400;color:var(--mu)}
+.cod-alta{margin-top:16px}.cod-alta summary{cursor:pointer;color:var(--mu);font-size:14px;padding:6px 0}
 input,select{width:100%;font-family:inherit;font-size:17px;padding:12px 14px;min-height:48px;border-radius:12px;border:1px solid var(--bd2);background:var(--bg);color:var(--tx)}
 input::placeholder{color:var(--mu);opacity:.8}
 input:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px var(--ac3)}
@@ -101,6 +102,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .list-box{max-height:260px;overflow:auto;border:1px solid var(--bd2);border-radius:12px;margin-top:6px;background:var(--card)}
 .list-box button{display:block;width:100%;text-align:left;padding:13px 14px;font-size:16px;border:0;border-bottom:1px solid var(--bd);background:none;color:var(--tx);cursor:pointer}
 .list-box button:hover{background:var(--ac2)}
+#cdeuda{margin-top:6px}#cdeuda b{color:var(--rd)}
+#fdLista td:last-child{width:1%;white-space:nowrap}
+.fd-mov{margin-top:14px}.fd-mov summary{cursor:pointer;color:var(--mu);font-size:14px;padding:6px 0}
 .ok{margin-top:12px;color:var(--ac);font-weight:600;text-align:center;min-height:22px}
 .ok.err{color:var(--rd)}
 .note{font-size:14px;color:var(--wa);background:var(--wa2);border-radius:10px;padding:8px 12px;margin-top:8px}

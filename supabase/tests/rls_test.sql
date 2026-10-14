@@ -20,15 +20,15 @@ begin
   raise notice 'ok: %', msg;
 end $$;
 
--- Ana crea su negocio (sin código no puede)
+-- Ana crea su negocio (con un código inventado no puede; sin código se prueba en fiado_test.sql)
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
 do $$ begin
   begin
-    perform public.create_business('Sin código', 'Ana', array['X'], false, array['Efectivo']);
-    raise exception 'FALLÓ: se creó un negocio sin código';
+    perform public.create_business('Código falso', 'Ana', array['X'], false, array['Efectivo'], 'NOEXISTE');
+    raise exception 'FALLÓ: se creó un negocio con un código inventado';
   exception when raise_exception then
     if sqlerrm like 'FALLÓ%' then raise; end if;
-    raise notice 'ok: sin código de alta no se crea un negocio';
+    raise notice 'ok: con un código inventado no se crea un negocio';
   end;
 end $$;
 select pg_temp.check((select count(*) from signup_codes) = 0, 'Ana no ve los códigos de alta');

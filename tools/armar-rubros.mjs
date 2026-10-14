@@ -173,7 +173,7 @@ function pagina(r) {
       <h1>${esc(r.h1)}</h1>
       <p class="sub">${esc(r.sub)}</p>
       <div class="ctas">
-        <a class="btn pri wa" href="#" target="_blank" rel="noopener">Probá 7 días gratis</a>
+        <a class="btn pri" href="../app/?registro">Probá 7 días gratis</a>
         <a class="btn sec" href="../app/?demo=${r.slug}">Ver la demo de ${esc(r.un.replace(/^una? /, ""))}</a>
       </div>
       <p class="tranqui">Sin tarjeta para la prueba · Sin contrato · Cancelás cuando quieras</p>
@@ -210,7 +210,7 @@ ${GRILLA.map(([t, p]) => `      <div class="ben"><h3>${esc(t)}</h3><p>${esc(p)}<
         <li>Todas las funciones</li>
         <li>Ayuda por WhatsApp</li>
       </ul>
-      <a class="btn pri wa" href="#" target="_blank" rel="noopener">Probá 7 días gratis</a>
+      <a class="btn pri" href="../app/?registro">Probá 7 días gratis</a>
     </div>
   </section>
 
@@ -223,7 +223,7 @@ ${faq.map(([q, a]) => `    <details><summary>${esc(q)}</summary><p>${esc(a)}</p>
     <h2>Probá Kovo en tu ${esc(r.nombre.toLowerCase())}</h2>
     <p class="mu">7 días gratis. Sin tarjeta, sin contrato.</p>
     <div class="ctas" style="justify-content:center">
-      <a class="btn pri wa" href="#" target="_blank" rel="noopener">Probá 7 días gratis</a>
+      <a class="btn pri" href="../app/?registro">Probá 7 días gratis</a>
       <a class="btn sec" href="../app/?demo=${r.slug}">Ver la demo</a>
     </div>
     <p class="otros">Kovo también para: ${otros}</p>
@@ -240,7 +240,7 @@ ${faq.map(([q, a]) => `    <details><summary>${esc(q)}</summary><p>${esc(a)}</p>
 
 <script>
   const tel = "5493329593188";
-  const msg = ${JSON.stringify(`Hola, tengo ${r.un} y quiero probar Kovo. ¿Me pasan un código de alta?`)};
+  const msg = ${JSON.stringify(`Hola, tengo ${r.un} y tengo una consulta sobre Kovo.`)};
   document.querySelectorAll("a.wa").forEach(a => a.href = "https://wa.me/" + tel + "?text=" + encodeURIComponent(msg));
   const h = document.getElementById("top");
   addEventListener("scroll", () => h.classList.toggle("sombra", scrollY > 8), { passive: true });

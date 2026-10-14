@@ -48,7 +48,7 @@
   let semilla = 7; const azar = () => (semilla = (semilla * 16807) % 2147483647) / 2147483647;
 
   const b = id();
-  db.businesses.push({ id: b, name: nombre, ticket_footer: "¡Gracias por su compra!", plan: "free", trial_ends_at: dia(-7).toISOString(), created_at: dia(60).toISOString(), created_by: user.id });
+  db.businesses.push({ id: b, name: nombre, ticket_footer: "¡Gracias por su compra!", plan: "free", trial_ends_at: dia(-7).toISOString(), created_at: dia(60).toISOString(), created_by: user.id, fiado: true });
   db.members.push({ business_id: b, user_id: user.id, role: "owner", display_name: "Demo", created_at: dia(60).toISOString() });
   const local = id();
   db.shops.push({ id: local, business_id: b, name: "Local", kind: "retail", position: 1, active: true });
@@ -80,6 +80,19 @@
     if (d % 7 === 3) db.expenses.push({ id: id(), business_id: b, shop_id: local, kind: "supplier", day: iso(f), amount: 85000 + Math.round(azar() * 40000), name: "Distribuidora del Sur", payment: "Transferencia", created_at: f.toISOString() });
   }
   db.openings.push({ business_id: b, shop_id: local, day: iso(dia(0)), amount: 20000, updated_at: new Date().toISOString() });
+  // Fiado: tres clientes del barrio con su cuenta.
+  [["Rosa (vecina)", [[9, 6400], [5, 3800], [2, 5200]], [[4, 6400, "Efectivo"]]],
+   ["Don Julio", [[12, 12500], [6, 8300]], [[3, 10000, "Transferencia"]]],
+   ["Marta", [[1, 4600]], []]].forEach(([nom, ventasF, pagosF]) => {
+    const c = { id: id(), business_id: b, name: nom }; db.clients.push(c);
+    ventasF.forEach(([d, amount]) => {
+      const f = dia(d); f.setHours(18, 30, 0, 0); if (d === 0 && f > new Date()) f.setTime(Date.now() - 30 * 60e3);
+      const s = { id: id(), business_id: b, shop_id: local, day: iso(f), created_at: f.toISOString(), created_by: user.id, client_name: nom, payment: "Fiado", amount, paid_with: 0, items: [] };
+      db.sales.push(s);
+      db.fiados.push({ id: id(), business_id: b, client_id: c.id, sale_id: s.id, kind: "fiado", amount, payment: null, shop_id: local, day: s.day, created_at: s.created_at, created_by: user.id });
+    });
+    pagosF.forEach(([d, amount, payment]) => { const f = dia(d); f.setHours(11, 0, 0, 0); db.fiados.push({ id: id(), business_id: b, client_id: c.id, sale_id: null, kind: "pago", amount, payment, shop_id: local, day: iso(f), created_at: f.toISOString(), created_by: user.id }) });
+  });
   db.expenses.push({ id: id(), business_id: b, shop_id: local, kind: "withdrawal", day: iso(dia(0)), amount: 15000, name: "", payment: "Efectivo", created_at: new Date().toISOString() });
 
   // Sin cuenta no hay plan, ni panel, ni salir: en su lugar, un aviso para pedir la prueba.
@@ -91,8 +104,7 @@
     const a = document.createElement("div"); a.className = "demo-aviso";
     const t = document.createElement("span"); t.textContent = "Estás viendo una demo con datos de ejemplo. Probá vender, mirá el cierre y el balance: nada se guarda.";
     const l = document.createElement("a"); l.textContent = "Quiero probarlo en mi negocio";
-    l.href = "https://wa.me/5493329593188?text=" + encodeURIComponent("Hola, vi la demo de Kovo y quiero probarlo en mi negocio. ¿Me pasan un código de alta?");
-    l.target = "_blank"; l.rel = "noopener";
+    l.href = "./?registro";
     a.append(t, l); document.body.prepend(a);
   });
 })();

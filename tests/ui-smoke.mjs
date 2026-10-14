@@ -42,13 +42,12 @@ for (const [w, h, scheme] of [[390, 844, "light"], [1100, 900, "dark"]]) {
   await page.fill("#sshops .row:nth-child(2) input", "Norte");
   await page.check("#swhole");
   await snap("2-alta");
-  await page.click("#screate");
-  await page.waitForFunction(() => document.getElementById("smsg").textContent.includes("código"));
-  check(true, "sin código de alta no deja crear el negocio");
+  check(!(await page.isVisible("#scodigo")), "el código de alta queda guardado en un desplegable opcional");
+  await page.click(".cod-alta summary");
   await page.fill("#scodigo", "NOEXISTE"); await page.click("#screate");
   await page.waitForFunction(() => document.getElementById("smsg").textContent.includes("no existe"));
   check(true, "con un código que no existe avisa");
-  await page.fill("#scodigo", "prueba01"); await page.click("#screate");
+  await page.fill("#scodigo", ""); await page.click("#screate");
   await page.waitForSelector("#screen-app:not([hidden])");
   check(await page.textContent("#bizName") === "Dietética Ana", "muestra el nombre del negocio");
   check((await page.$$("#locales .chip")).length === 3, "ofrece los 3 locales (2 + Mayorista)");
@@ -157,6 +156,22 @@ for (const [w, h, scheme] of [[390, 844, "light"], [1100, 900, "dark"]]) {
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   check(!wide, `sin scroll horizontal a ${w}px`);
   check(!errors.length, "sin errores en la consola " + errors.join(" | "));
+  await page.close();
+}
+{
+  // El botón "Probá 7 días gratis" de la página lleva a app/?registro: abre directo en Crear cuenta
+  const page = await browser.newPage();
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
+  await page.addInitScript(mock);
+  await page.goto(base + "?registro");
+  await page.waitForSelector("#screen-auth:not([hidden])");
+  check(await page.$eval("#tabSignup", b => b.classList.contains("on")) && (await page.textContent("#authBtn")) === "Crear cuenta", "?registro abre en Crear cuenta");
+  await page.click("#tabSignup");
+  await page.fill("#aemail", "otro@negocio.com"); await page.fill("#apass", "clave1234"); await page.click("#authBtn");
+  await page.waitForSelector("#screen-setup:not([hidden])");
+  await page.fill("#sname", "Kiosco Uno"); await page.fill("#sshops input", "Centro"); await page.click("#screate");
+  await page.waitForSelector("#screen-app:not([hidden])");
+  check(true, "crea su negocio sin código de alta");
   await page.close();
 }
 await browser.close(); server.close();
