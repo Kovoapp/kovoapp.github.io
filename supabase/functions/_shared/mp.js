@@ -36,7 +36,7 @@ function clientes(env, fetchFn) {
 
 const res = (status, body) => ({ status, body });
 
-// La llama la app (Ajustes → Mi plan). body: { business_id, action: "suscribir" | "cancelar" | "revisar", payer_email? }
+// La llama la app (Ajustes → Mi plan). body: { business_id, action: "suscribir" | "pagar_mes" | "cancelar" | "revisar", payer_email? }
 export async function crearSuscripcion({ env, fetch: fetchFn, authHeader, body }) {
   const { mp, db } = clientes(env, fetchFn);
   if (!env.MP_ACCESS_TOKEN) return res(500, { error: "falta_mp_access_token" });
@@ -74,6 +74,24 @@ export async function crearSuscripcion({ env, fetch: fetchFn, authHeader, body }
   }
 
   const price = Number(await db("/rest/v1/rpc/subscription_price", { method: "POST", body: { b } }));
+
+  // Pagar un mes, sin suscripción: acepta dinero en cuenta, débito, prepagas y efectivo.
+  // Cuando Mercado Pago aprueba el pago, el aviso (procesarAviso) le suma 30 días al negocio.
+  if (body.action === "pagar_mes") {
+    const pref = await mp("/checkout/preferences", {
+      method: "POST",
+      body: {
+        items: [{ id: "kovo-mes", title: `Kovo · 1 mes · ${biz.name}`.slice(0, 120), quantity: 1, unit_price: price, currency_id: "ARS" }],
+        external_reference: "mes:" + b,
+        payer: { email: (body.payer_email || user.email || "").trim() || undefined },
+        back_urls: { success: (env.SITE_URL || SITIO) + "?pago=ok", pending: (env.SITE_URL || SITIO) + "?pago=pendiente", failure: env.SITE_URL || SITIO },
+        auto_return: "approved",
+        notification_url: env.SUPABASE_URL + "/functions/v1/mp-webhook",
+        statement_descriptor: "KOVO",
+      },
+    });
+    return res(200, { init_point: pref.init_point, price });
+  }
   const auto = { frequency: 1, frequency_type: "months", transaction_amount: price, currency_id: "ARS" };
   // Durante la prueba gratis, el primer cobro se hace cuando termina la prueba.
   if (biz.trial_ends_at && new Date(biz.trial_ends_at) - Date.now() > 10 * 60e3) auto.start_date = new Date(biz.trial_ends_at).toISOString();
@@ -104,6 +122,15 @@ export async function procesarAviso({ env, fetch: fetchFn, url, body }) {
   // Si Mercado Pago no conoce el id (por ejemplo, el aviso de prueba "Simular notificación"), no hay nada que hacer.
   const buscar = path => mp(path).catch(e => { if (e.status === 404) return null; throw e });
   let preId, cuota = null;
+  // Pago de un mes suelto (Checkout Pro): solo cuenta cuando está aprobado.
+  if (tipo === "payment") {
+    const pago = await buscar(`/v1/payments/${encodeURIComponent(id)}`);
+    const m = pago && /^mes:([0-9a-f-]{36})$/.exec(pago.external_reference || "");
+    if (!m) return res(200, { ignorado: "no_es_un_mes" });
+    if (pago.status !== "approved") return res(200, { ignorado: pago.status });
+    const ok = await db("/rest/v1/rpc/mp_pay_month", { method: "POST", body: { p_business: m[1], p_payment: String(pago.id), p_amount: pago.transaction_amount } });
+    return res(200, { ok, mes: true });
+  }
   if (/authorized_payment/.test(tipo)) { cuota = await buscar(`/authorized_payments/${encodeURIComponent(id)}`); preId = cuota && cuota.preapproval_id }
   else if (/preapproval/.test(tipo) && !/plan/.test(tipo)) preId = id;
   else return res(200, { ignorado: tipo });

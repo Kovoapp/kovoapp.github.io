@@ -229,6 +229,13 @@ async function enter() {
     toast("¡Gracias! Mercado Pago está confirmando tu suscripción.");
     revisarPago(true);
   }
+  // Volviendo de pagar un mes: el mes se suma cuando llega el aviso de Mercado Pago.
+  const pago = /pago=(ok|pendiente)/.exec(location.search);
+  if (pago) {
+    history.replaceState(null, "", location.pathname);
+    toast(pago[1] === "ok" ? "¡Gracias! En cuanto Mercado Pago confirme el pago se suma el mes." : "Cuando pagues, el mes se suma solo.");
+    if (pago[1] === "ok") [5e3, 15e3, 40e3].forEach(t => setTimeout(reloadRefs, t));
+  }
 }
 
 // ---------------------------------------------------------------
@@ -240,14 +247,14 @@ const diasHasta = d => Math.ceil((new Date(d) - Date.now()) / 864e5);
 const puedeVender = () => biz.plan === "free" || futuro(biz.trial_ends_at) || futuro(biz.paid_until);
 const fechaCorta = d => new Date(d).toLocaleDateString("es-AR", { day: "numeric", month: "long" });
 function pintaPlan() {
-  const enPrueba = futuro(biz.trial_ends_at) && biz.mp_status !== "authorized" && biz.plan !== "free";
+  const enPrueba = futuro(biz.trial_ends_at) && biz.mp_status !== "authorized" && biz.plan !== "free" && !futuro(biz.paid_until);
   const left = diasHasta(biz.trial_ends_at);
   $("trialBanner").hidden = !(role === "owner" && (enPrueba || !puedeVender()));
-  $("trialBanner").textContent = enPrueba ? `Te quedan ${left} día${left === 1 ? "" : "s"} de prueba gratis. Para seguir después, suscribite en Ajustes → Mi plan.`
-    : "Tu plan está vencido: no se pueden anotar ventas. Suscribite en Ajustes → Mi plan.";
+  $("trialBanner").textContent = enPrueba ? `Te quedan ${left} día${left === 1 ? "" : "s"} de prueba gratis. Para seguir después, suscribite o pagá un mes en Ajustes → Mi plan.`
+    : "Tu plan está vencido: no se pueden anotar ventas. Suscribite o pagá un mes en Ajustes → Mi plan.";
   const ok = puedeVender();
   $("bloqueo").hidden = ok; $("enviar").disabled = !ok;
-  if (!ok) $("bloqueo").textContent = role === "owner" ? "Tu plan está vencido. Para seguir anotando ventas, suscribite en Ajustes → Mi plan."
+  if (!ok) $("bloqueo").textContent = role === "owner" ? "Tu plan está vencido. Para seguir anotando ventas, suscribite o pagá un mes en Ajustes → Mi plan."
     : "La caja de este negocio está pausada. Avisale al dueño que renueve la suscripción.";
 }
 async function renderPlan() {
@@ -264,6 +271,9 @@ async function renderPlan() {
     estado = "Suscripción activa"; suscribir = false; cancelar = true;
     detalle = (futuro(biz.trial_ends_at) ? "El primer cobro es el " + fechaCorta(biz.trial_ends_at) + ", cuando termina la prueba. " : "")
       + "Mercado Pago te cobra " + $p + " por mes de forma automática.";
+  } else if (futuro(biz.paid_until) && !["cancelled", "paused"].includes(biz.mp_status)) {
+    estado = "Mes pagado";
+    detalle = "Podés usar la caja hasta el " + fechaCorta(biz.paid_until) + ". Para seguir después, pagá otro mes o suscribite (" + $p + " por mes).";
   } else if (biz.mp_status === "pending") {
     estado = "Esperando la confirmación de Mercado Pago";
     detalle = "Si no terminaste el pago, podés volver a intentarlo.";
@@ -300,6 +310,15 @@ async function suscribir() {
   $("planBtn").disabled = true; $("planBtn").textContent = "Abriendo Mercado Pago...";
   const { data, error } = await sb.functions.invoke("mp-suscribir", { body: { business_id: biz.id, action: "suscribir", payer_email: email || undefined } });
   $("planBtn").disabled = false; $("planBtn").textContent = "Suscribirme con Mercado Pago";
+  if (error || !data || !data.init_point) return aviso("No se pudo conectar con Mercado Pago. Probá de nuevo en un momento.");
+  location.href = data.init_point;
+}
+async function pagarMes() {
+  const email = $("planEmail").value.trim();
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) return aviso("Revisá el email de Mercado Pago.");
+  $("planMes").disabled = true; $("planMes").textContent = "Abriendo Mercado Pago...";
+  const { data, error } = await sb.functions.invoke("mp-suscribir", { body: { business_id: biz.id, action: "pagar_mes", payer_email: email || undefined } });
+  $("planMes").disabled = false; $("planMes").textContent = "Pagar un mes";
   if (error || !data || !data.init_point) return aviso("No se pudo conectar con Mercado Pago. Probá de nuevo en un momento.");
   location.href = data.init_point;
 }
@@ -898,7 +917,7 @@ function pintaNegocios() {
   negocios.forEach(b => {
     const dias = Math.ceil((new Date(b.trial_ends_at) - Date.now()) / 864e5);
     const pagaHasta = b.paid_until && new Date(b.paid_until) > Date.now();
-    const estado = b.plan === "free" ? "Gratis" : b.plan === "active" && pagaHasta ? "Pagando " + fmt(b.price)
+    const estado = b.plan === "free" ? "Gratis" : b.plan === "active" && pagaHasta ? "Pagando" + (b.price ? " " + fmt(b.price) : "") + " (hasta " + new Date(b.paid_until).toLocaleDateString("es-AR") + ")"
       : b.plan === "paused" && pagaHasta ? "Canceló (usa hasta " + new Date(b.paid_until).toLocaleDateString("es-AR") + ")"
       : dias > 0 ? `Prueba: ${dias} día${dias === 1 ? "" : "s"}` : "Vencido";
     const r = document.createElement("div"); r.className = "item"; r.style.display = "block";
@@ -910,9 +929,18 @@ function pintaNegocios() {
       if (!await ask((b.plan === "free" ? "¿Quitarle el acceso gratis a " : "¿Darle acceso gratis, sin pagar, a ") + b.name + "?")) return;
       const { error } = await sb.rpc("admin_set_free", { p_business: b.business_id, p_free: b.plan !== "free" });
       if (error) return aviso(errMsg(error));
-      toast("Listo"); if (b.business_id === biz.id) reloadRefs(); else cargarAdmin();
+      toast("Listo"); if (b.business_id === biz.id) reloadRefs(); cargarAdmin();
     };
-    r.append(n, d, g); t.appendChild(r);
+    // Para quien paga por transferencia: suma 30 días desde hoy (o desde lo que ya tenía pago).
+    const m = document.createElement("button"); m.type = "button"; m.className = "linkbtn"; m.style.padding = "4px 0"; m.style.marginLeft = "16px";
+    m.textContent = "Anotar un mes pagado"; m.hidden = b.plan === "free";
+    m.onclick = async () => {
+      if (!await ask("¿Anotar un mes pagado para " + b.name + "? Se suman 30 días de uso.")) return;
+      const { data, error } = await sb.rpc("admin_mark_paid", { p_business: b.business_id });
+      if (error) return aviso(errMsg(error));
+      toast("Pagado hasta el " + new Date(data).toLocaleDateString("es-AR")); if (b.business_id === biz.id) reloadRefs(); cargarAdmin();
+    };
+    r.append(n, d, g, m); t.appendChild(r);
   });
 }
 async function pintaSugerencias() {
@@ -1016,7 +1044,7 @@ async function leerImport(file) {
   const box = $("pimpRes"); box.textContent = "Leyendo " + file.name + "…"; importar = null;
   let res;
   try {
-    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=17");
+    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=18");
     res = armarProductos(await leerPlanilla(file));
   } catch (e) {
     box.innerHTML = ""; const d = document.createElement("div"); d.className = "imp-err";
@@ -1296,7 +1324,7 @@ function wireOnce() {
     if (error) return aviso(errMsg(error));
     $("cpayNew").value = ""; reloadRefs();
   };
-  $("planBtn").onclick = suscribir; $("planCancel").onclick = cancelarSuscripcion;
+  $("planBtn").onclick = suscribir; $("planMes").onclick = pagarMes; $("planCancel").onclick = cancelarSuscripcion;
   $("admPrecios").onclick = async () => {
     const v = { founder_slots: parseInt($("admSlots").value), founder_price: parseFloat($("admFounder").value), regular_price: parseFloat($("admRegular").value) };
     if (!(v.founder_slots >= 0 && v.founder_price > 0 && v.regular_price > 0)) return aviso("Revisá los precios.");
