@@ -108,6 +108,7 @@ const RUBROS = [
 const GENERAL = [
   ["¿Tengo que instalar algo?", "No. Kovo funciona desde el navegador del celular, la tablet o la compu. Si querés, lo agregás a la pantalla de inicio y se abre como una app."],
   ["¿Cuánto cuesta?", "$18.000 por mes, con todo incluido y sin límite de locales ni cajeros. Los primeros 10 negocios pagan $15.000 el primer mes. Tenés 7 días de prueba gratis."],
+  ["¿Puedo anotar lo que fío?", "Sí. Activás el fiado en Ajustes: anotás a quién le fiaste, ves cuánto te debe cada cliente y anotás los pagos. Si no fiás, lo dejás apagado."],
   ["¿Hace factura electrónica de ARCA?", "Todavía no. Kovo anota las ventas e imprime tickets no fiscales."],
 ];
 

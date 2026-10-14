@@ -41,6 +41,17 @@ const GUIAS = [
     ],
   },
   {
+    slug: "fiado", titulo: "Cómo anotar el fiado y cobrar lo que te deben", corto: "Fiado",
+    desc: "Activá el fiado, anotá a quién le fiaste, mirá cuánto te debe cada cliente y anotá los pagos cuando te paguen.",
+    intro: "El fiado viene apagado. Si en tu negocio fiás, lo prendés una vez y queda disponible para todos los que usan la caja.",
+    pasos: [
+      ["Activalo en Ajustes", "Entrá a Ajustes (el engranaje de arriba a la derecha) y en la tarjeta Fiado marcá Usar fiado en este negocio. Si después lo apagás, deja de aparecer, pero lo que te deben sigue a la vista.", "fiado-ajustes", "Tarjeta Fiado en Ajustes con la opción para activarlo"],
+      ["Fiá una venta", "En Vender, cargá los productos o el total y elegí Fiado como medio de pago. Escribí el nombre del cliente o elegilo de la lista: si ya te debe, Kovo te muestra cuánto. Tocá Anotar venta.", "fiar", "Venta con Fiado como medio de pago, el cliente y lo que ya debe"],
+      ["Mirá quién te debe", "Abajo de la pantalla Vender está la tarjeta Fiado, con el total que te deben y cuánto debe cada cliente. En Últimos movimientos ves cada fiado y cada pago con su fecha.", "fiado-lista", "Tarjeta Fiado con lo que debe cada cliente"],
+      ["Anotá cuando te pagan", "Tocá Cobrar al lado del cliente, poné cuánto te paga (puede ser una parte) y cómo paga. Tocá Anotar pago y su deuda baja. Si paga en efectivo, en el resumen del día se suma al efectivo que tiene que haber en la caja.", "fiado-cobrar", "Pago de un cliente: monto, medio de pago y el botón Anotar pago"],
+    ],
+  },
+  {
     slug: "cierre-de-caja", titulo: "Cómo hacer la caja inicial y el cierre de caja", corto: "Caja inicial y cierre",
     desc: "Anotá con cuánto abre la caja, los retiros del día, y al cerrar mirá cuánto efectivo tiene que haber y qué fue lo más vendido.",
     intro: "Con la caja inicial y los retiros anotados, Kovo te dice cuánta plata en efectivo tiene que haber en la caja al final del día.",
@@ -59,7 +70,6 @@ const GUIAS = [
     pasos: [
       ["Generá el código", "En Ajustes, en la tarjeta Equipo, tocá Código para cajero. Copialo y mandáselo a tu empleado. Vence en 7 días y sirve una sola vez.", "equipo", "Tarjeta Equipo con un código de invitación para cajero"],
       ["Tu empleado se une", "Tu empleado entra a kovoapp.github.io/app, crea su cuenta, toca Me invitaron y pone el código y su nombre. Ya puede vender.", null, ""],
-      ["Mirá lo que ve", "Si querés ver la app como la ve un cajero, en Ajustes tenés Ver la app como. Lo que anotes mientras tanto se guarda igual.", null, ""],
     ],
   },
   {

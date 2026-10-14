@@ -126,4 +126,19 @@ await foto(page, "#balance .card:has(#btabla)", "balance", { hasta: "#btabla tr:
 await foto(page, "#balance .card:has(#mesKpis)", "ventas-mes");
 await foto(page, "#balance .card:has(#bgan)", "ganancia");
 
+// 8. Fiado (la demo ya lo trae activado, con clientes que deben).
+await ajustes(page);
+await foto(page, "#cfgbox .card:has(#cfiado)", "fiado-ajustes");
+await page.click("#cfgBack");
+await tab(page, "venta");
+await page.fill("#busq", "Yerba"); await page.click("#res .chip"); await page.fill("#busq", "");
+await page.click('#pagos .chip:text-is("Fiado")');
+await page.fill("#cbus", "Rosa (vecina)"); await page.dispatchEvent("#cbus", "input"); await page.evaluate(() => { document.getElementById("cres").hidden = true; document.getElementById("mdel").hidden = true });
+await foto(page, "#venta .card:has(#monto)", "fiar", { hasta: "#enviar" });
+await page.fill("#cbus", ""); await page.dispatchEvent("#cbus", "input"); await page.evaluate(() => document.getElementById("cres").hidden = true);
+await foto(page, "#fiadoCard", "fiado-lista");
+await page.click('#fdLista tr:has-text("Don Julio") button');
+await page.fill("#fdMonto", "5000"); await page.click('#fdPagos .chip:text-is("Efectivo")');
+await foto(page, "#fiadoCard", "fiado-cobrar");
+
 await browser.close(); server.close();
