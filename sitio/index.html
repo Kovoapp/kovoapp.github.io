@@ -20,13 +20,13 @@
   if (/suscripcion=|access_token|type=recovery|error_description/.test(location.search + location.hash))
     location.replace("app/" + location.search + location.hash);
 </script>
-<link rel="stylesheet" href="estilo.css?v=2">
+<link rel="stylesheet" href="estilo.css?v=3">
 </head>
 <body>
 <header id="top">
   <div class="wrap nav">
     <a class="marca" href="#"><img src="icons/icon.svg" alt="">Kovo</a>
-    <nav class="links"><a href="#funciones">Funciones</a><a href="#rubros">Rubros</a><a href="#diferencias">Por qué Kovo</a><a href="guias/">Guías</a><a href="#precio">Precio</a><a href="#preguntas">Preguntas</a></nav>
+    <nav class="links"><a href="#funciones">Funciones</a><a href="#demo">Demo</a><a href="#rubros">Rubros</a><a href="#diferencias">Por qué Kovo</a><a href="guias/">Guías</a><a href="#precio">Precio</a><a href="#preguntas">Preguntas</a></nav>
     <a class="btn sec" href="app/">Entrar</a>
   </div>
 </header>
@@ -52,6 +52,20 @@
     <div class="ben"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg></div><h3>Varios locales</h3><p>Cada local con su caja, y todo junto cuando lo necesitás.</p></div>
     <div class="ben"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2zM9 7h6M9 11h6M9 15h4"/></svg></div><h3>Tickets</h3><p>Imprimís el ticket con tu mensaje en la impresora térmica.</p></div>
   </div>
+
+  <section id="demo" class="demo">
+    <div class="txt">
+      <span class="et">Sin registrarte</span>
+      <h2>Probalo ahora, con un negocio de ejemplo</h2>
+      <p>Abrí la demo y usala como si fuera tuya: anotá una venta, mirá el cierre de caja y el balance del mes, que ya tiene un mes de ventas cargado. No te pide email ni tarjeta, y nada de lo que hagas queda guardado.</p>
+      <a class="btn pri" href="app/?demo">Abrir la demo</a>
+      <p class="mu" style="margin-top:22px;font-size:15px">O probala con los productos de tu rubro:</p>
+      <div class="demo-rubros">
+        <a href="app/?demo=kiosco">Kiosco</a><a href="app/?demo=almacen">Almacén</a><a href="app/?demo=dietetica">Dietética</a><a href="app/?demo=verduleria">Verdulería</a><a href="app/?demo=carniceria">Carnicería</a>
+      </div>
+    </div>
+    <a class="tel" href="app/?demo" aria-label="Abrir la demo"><img src="img/demo.jpg" alt="Cierre de caja en la demo de Kovo: vendido, cantidad de ventas, ticket promedio y lo más vendido" loading="lazy" width="390" height="760"></a>
+  </section>
 
   <section id="funciones" class="bloque">
     <div class="txt">
@@ -154,6 +168,16 @@
       <div class="paso"><h3>Escribinos</h3><p>Mandanos un WhatsApp y contanos de tu negocio.</p></div>
       <div class="paso"><h3>Recibí tu código</h3><p>Te pasamos un código de alta para crear tu cuenta.</p></div>
       <div class="paso"><h3>Empezá a vender</h3><p>Cargás tus locales y en un minuto ya estás anotando ventas.</p></div>
+    </div>
+  </section>
+
+  <section id="quien" class="quien">
+    <img class="cara" src="icons/icon.svg" alt="">
+    <div>
+      <h2>Quién está detrás de Kovo</h2>
+      <p>Kovo no es una empresa grande: lo hago yo y te atiendo yo. Si tenés una duda o algo no anda, me escribís por WhatsApp y te contesto yo, no un bot ni un formulario.</p>
+      <p>Las sugerencias que mandás desde la app las leo todas. Si a tu negocio le falta algo, contámelo.</p>
+      <a class="btn sec wa" href="#" target="_blank" rel="noopener">Escribirme por WhatsApp</a>
     </div>
   </section>
 

@@ -172,3 +172,19 @@ footer .marca img{width:26px;height:26px;border-radius:8px}
 .gcard span:last-child{display:block;font-size:15px;color:var(--mu);padding:4px 18px 18px}
 @media (max-width:860px){.glista{grid-template-columns:1fr 1fr}}
 @media (max-width:520px){.glista{grid-template-columns:1fr}}
+
+/* Demo y quién hace Kovo (página principal) */
+.demo{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;background:var(--card);border:1px solid var(--bd);border-radius:28px;padding:44px;margin:8px 0 32px}
+.demo .et{display:inline-block;background:var(--ac2);color:var(--ac-d);font-weight:700;font-size:14px;padding:6px 12px;border-radius:999px;margin-bottom:16px}
+.demo .txt p{font-size:18px;color:var(--mu);margin:14px 0 24px;max-width:46ch}
+.demo .tel{display:block;width:min(280px,72vw)}
+.demo-rubros{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.demo-rubros a{background:var(--bg);border:1px solid var(--bd);border-radius:999px;padding:8px 14px;font-weight:600;font-size:15px;text-decoration:none}
+.demo-rubros a:hover{border-color:var(--ac);color:var(--ac)}
+@media (max-width:860px){.demo{grid-template-columns:1fr;padding:28px 20px;text-align:center;gap:32px}.demo .txt p{margin-inline:auto}.demo-rubros{justify-content:center}}
+.quien{display:flex;gap:28px;align-items:flex-start;max-width:760px;margin:56px auto 0;background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:32px}
+.quien .cara{flex:0 0 96px;width:96px;height:96px;border-radius:50%;object-fit:cover}
+.quien h2{font-size:clamp(24px,3vw,30px)}
+.quien p{color:var(--mu);margin-top:12px}
+.quien .btn{margin-top:20px}
+@media (max-width:600px){.quien{flex-direction:column;align-items:center;text-align:center;padding:24px 20px}}
