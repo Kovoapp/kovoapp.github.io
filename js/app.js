@@ -219,7 +219,7 @@ async function enter() {
   const saved = store.get("biz", "");
   const m = mem.find(x => x.business_id === saved) || mem[0];
   store.set("biz", m.business_id);
-  role = m.role;
+  role = realRole = m.role;
   await loadRefs(m.business_id);
   show("app");
   startApp();
@@ -312,13 +312,15 @@ async function cancelarSuscripcion() {
 
 async function loadRefs(b) {
   const q = t => sb.from(t).select("*").eq("business_id", b);
-  const [bz, sh, pm, cl, pv, pr, mb, pc] = await Promise.all([
+  const [bz, sh, pm, cl, pv, pr, mb, pc, adm] = await Promise.all([
     sb.from("businesses").select("*").eq("id", b).single(),
     q("shops").order("position"), q("payment_methods").order("position"),
     q("clients").order("name"), isMgr() ? q("providers").order("name") : Promise.resolve({ data: [] }),
     q("products").order("name"), q("members").order("created_at"),
-    isMgr() ? q("product_costs") : Promise.resolve({ data: [] })
+    isMgr() ? q("product_costs") : Promise.resolve({ data: [] }),
+    sb.rpc("is_platform_admin")
   ]);
+  $("adm").hidden = !(adm && adm.data);
   biz = bz.data; shops = sh.data || []; pays = pm.data || []; clientes = cl.data || []; provs = pv.data || []; catalog = pr.data || []; members = mb.data || [];
   costs = {}; (pc.data || []).forEach(c => costs[c.product_id] = num(c.cost));
 }
@@ -334,7 +336,7 @@ function startApp() {
   $("tabs").hidden = !isMgr();
   $$(".mgr").forEach(e => e.hidden = !isMgr());
   $$(".owner-only").forEach(e => e.hidden = role !== "owner");
-  pintaPlan();
+  pintaPlan(); pintaVista();
   if (!activeShops().find(s => s.id === local)) local = (activeShops()[0] || {}).id;
   renderLocales(); renderPagos(); renderCart(); renderClientes(); renderCatalog(); renderSettings(); pintaUndo();
   if (!started) { started = true; wireOnce() }
@@ -826,7 +828,7 @@ function renderSettings() {
     }
     tr.append(nm, rl, c3); tt.appendChild(tr);
   });
-  cargarInvites(); cargarAdmin(); renderPlan();
+  cargarInvites(); renderPlan();
   // Productos
   chips($("pu"), ["Unidad", "Kilo"], () => punit, v => punit = v);
   renderCatalog();
@@ -852,14 +854,14 @@ async function cargarInvites() {
 }
 // Administración de la app: códigos de alta y negocios. Solo para los administradores de la plataforma.
 async function cargarAdmin() {
-  const { data: soy } = await sb.rpc("is_platform_admin");
-  $("adminCard").hidden = !soy; if (!soy) return;
+  if ($("adm").hidden) return;
   const [ov, uc, cs] = await Promise.all([sb.rpc("admin_overview"), sb.rpc("admin_user_count"),
     sb.from("signup_codes").select("*").is("used_by", null).gt("expires_at", new Date().toISOString()).order("created_at", { ascending: false })]);
   const negocios = ov.data || [];
   const activos = negocios.filter(b => b.plan === "active").length;
   const pl = (n, uno, varios) => n + " " + (n === 1 ? uno : varios);
   $("adminStats").textContent = `${pl(uc.data ?? 0, "usuario", "usuarios")} · ${pl(negocios.length, "negocio", "negocios")} · ${activos} pagando`;
+  adminNegocios = negocios;
   const { data: ps } = await sb.from("platform_settings").select("*").eq("id", 1).single();
   if (ps) { $("admSlots").value = ps.founder_slots; $("admFounder").value = ps.founder_price; $("admRegular").value = ps.regular_price }
   const box = $("adminCodes"); box.innerHTML = "";
@@ -872,9 +874,23 @@ async function cargarAdmin() {
     r.append(c, d, cp, delBtn(async () => { await sb.from("signup_codes").delete().eq("code", sc.code); cargarAdmin() }, "Anular código"));
     box.appendChild(r);
   });
-  pintaSugerencias();
+  pintaSugerencias(); pintaNegocios();
+}
+// Estado de cada negocio para el panel: pagando, en prueba, vencido o gratis.
+let adminNegocios = [], adminFiltro = "Todos";
+function tipoNegocio(b) {
+  const pagaHasta = b.paid_until && new Date(b.paid_until) > Date.now();
+  if (b.plan === "free") return "Gratis";
+  if (pagaHasta) return "Pagando";
+  return new Date(b.trial_ends_at) > Date.now() ? "En prueba" : "Vencidos";
+}
+function pintaNegocios() {
+  const tipos = ["Todos", "Pagando", "En prueba", "Vencidos", "Gratis"];
+  const cuenta = k => k === "Todos" ? adminNegocios.length : adminNegocios.filter(b => tipoNegocio(b) === k).length;
+  chips($("adminFiltro"), tipos, () => adminFiltro, v => { adminFiltro = v; pintaNegocios() }, v => `${v} (${cuenta(v)})`);
+  const negocios = adminNegocios.filter(b => adminFiltro === "Todos" || tipoNegocio(b) === adminFiltro);
   const t = $("adminBiz"); t.innerHTML = "";
-  if (!negocios.length) { t.innerHTML = '<div class="mu" style="padding:10px 0">Todavía no hay negocios</div>'; return }
+  if (!negocios.length) { t.innerHTML = `<div class="mu" style="padding:10px 0">${adminNegocios.length ? "No hay negocios en este grupo" : "Todavía no hay negocios"}</div>`; return }
   negocios.forEach(b => {
     const dias = Math.ceil((new Date(b.trial_ends_at) - Date.now()) / 864e5);
     const pagaHasta = b.paid_until && new Date(b.paid_until) > Date.now();
@@ -996,7 +1012,7 @@ async function leerImport(file) {
   const box = $("pimpRes"); box.textContent = "Leyendo " + file.name + "…"; importar = null;
   let res;
   try {
-    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=15");
+    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=16");
     res = armarProductos(await leerPlanilla(file));
   } catch (e) {
     box.innerHTML = ""; const d = document.createElement("div"); d.className = "imp-err";
@@ -1144,14 +1160,33 @@ function goTab(t) {
 }
 // Ajustes es una pantalla aparte: tapa la caja y las pestañas hasta que se vuelve.
 let scrollCaja = 0;
-function mostrarAjustes(on) {
-  if (on) scrollCaja = window.scrollY;
-  $("cfgbox").hidden = !on; $("screen-app").classList.toggle("en-ajustes", on);
-  $("cfg").setAttribute("aria-expanded", String(on));
-  window.scrollTo({ top: on ? 0 : scrollCaja });
+// El panel de administración de Kovo funciona igual, en su propia pantalla.
+function mostrarPantalla(cual) {
+  const abierta = !$("cfgbox").hidden || !$("adminbox").hidden;
+  if (cual && !abierta) scrollCaja = window.scrollY;
+  $("cfgbox").hidden = cual !== "ajustes"; $("adminbox").hidden = cual !== "admin";
+  $("screen-app").classList.toggle("en-ajustes", !!cual);
+  $("cfg").setAttribute("aria-expanded", String(cual === "ajustes")); $("adm").setAttribute("aria-expanded", String(cual === "admin"));
+  window.scrollTo({ top: cual ? 0 : scrollCaja });
+  if (cual === "admin") cargarAdmin();
 }
-function abrirAjustes() { history.pushState({ ajustes: true }, ""); mostrarAjustes(true) }
-function cerrarAjustes() { if (history.state && history.state.ajustes) history.back(); else mostrarAjustes(false) }
+function abrir(cual) { if (history.state && history.state.pantalla) history.replaceState({ pantalla: cual }, ""); else history.pushState({ pantalla: cual }, ""); mostrarPantalla(cual) }
+function cerrar() { if (history.state && history.state.pantalla) history.back(); else mostrarPantalla(null) }
+
+// Ver la app como cajero: el dueño o un administrador ve lo mismo que sus cajeros.
+let realRole = null;
+async function verComo(r) {
+  role = r; mostrarPantalla(null);
+  if (history.state && history.state.pantalla) history.replaceState(null, "");
+  await loadRefs(biz.id); startApp(); goTab("venta");
+  toast(r === "cashier" ? "Ahora ves Kovo como un cajero" : "Volviste a ver Kovo como " + (realRole === "owner" ? "dueño" : "administrador"));
+}
+function pintaVista() {
+  const puede = realRole === "owner" || realRole === "admin", yo = realRole === "owner" ? "Dueño" : "Administrador";
+  $("vistaCard").hidden = !puede; $("vistaBanner").hidden = !puede || role === realRole;
+  $("vistaVolver").textContent = "Volver a ver como " + yo.toLowerCase();
+  if (puede) chips($("vistaChips"), [realRole, "cashier"], () => role, v => { if (v !== role) verComo(v) }, v => v === "cashier" ? "Cajero" : yo);
+}
 function wireOnce() {
   document.querySelectorAll("input[type=number]").forEach(i => i.addEventListener("wheel", () => i.blur()));
   $("monto").oninput = calc; $("paga").oninput = calc;
@@ -1228,10 +1263,12 @@ function wireOnce() {
     downloadCsv("copia-seguridad-" + monthRange()[0] + ".csv", f);
   };
   $$("#tabs .tab").forEach(b => b.onclick = () => goTab(b.dataset.t));
-  $("cfg").onclick = () => $("cfgbox").hidden ? abrirAjustes() : cerrarAjustes();
-  $("cfgBack").onclick = cerrarAjustes;
-  // El botón "atrás" del celular cierra Ajustes en vez de salir de la app.
-  window.addEventListener("popstate", () => { if (!$("cfgbox").hidden) mostrarAjustes(false) });
+  $("cfg").onclick = () => $("cfgbox").hidden ? abrir("ajustes") : cerrar();
+  $("adm").onclick = () => $("adminbox").hidden ? abrir("admin") : cerrar();
+  $("cfgBack").onclick = cerrar; $("admBack").onclick = cerrar;
+  $("vistaVolver").onclick = () => verComo(realRole);
+  // El botón "atrás" del celular cierra Ajustes o el panel en vez de salir de la app.
+  window.addEventListener("popstate", () => mostrarPantalla(history.state && history.state.pantalla || null));
   $("cbizSave").onclick = async () => {
     const name = $("cbiz").value.trim(); if (!name) return aviso("Escribí el nombre del negocio.");
     const { error } = await sb.from("businesses").update({ name }).eq("id", biz.id);

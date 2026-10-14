@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="styles.css?v=15">
+<link rel="stylesheet" href="styles.css?v=16">
 </head>
 <body>
 
@@ -98,25 +98,41 @@
     <div class="logo" aria-hidden="true"><svg width="26" height="26" viewBox="100 100 330 330" fill="currentColor"><rect x="138" y="112" width="68" height="288" rx="34"/><path d="M206 268 L 352 392" stroke="currentColor" stroke-width="68" stroke-linecap="round"/><path d="M196 276 C 220 170 290 112 392 104 C 384 196 316 262 196 276 Z"/><path d="M226 248 C 270 200 316 158 368 128" fill="none" style="stroke:var(--ac)" stroke-width="16" stroke-linecap="round"/></svg></div>
     <div style="min-width:0"><h1 id="bizName">Caja</h1><div class="hoy" id="hoyTxt"></div></div>
   </div>
+  <button id="adm" class="icon-btn" title="Administración de Kovo" aria-label="Administración de Kovo" aria-expanded="false" hidden><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></button>
   <button id="cfg" class="icon-btn" title="Ajustes" aria-label="Ajustes" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></button>
 </header>
 
+<div id="vistaBanner" class="note vista" hidden>Estás viendo Kovo como lo ve un cajero. <button type="button" class="linkbtn" id="vistaVolver">Volver a ver como dueño</button></div>
 <div id="trialBanner" class="note" hidden style="margin-bottom:14px"></div>
 
-<!-- Ajustes -->
-<div id="cfgbox" hidden>
+<!-- Panel de administración de Kovo (solo administradores de la app) -->
+<div id="adminbox" hidden>
   <div class="cfg-head">
-    <button type="button" id="cfgBack" class="icon-btn" aria-label="Volver a la caja"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-    <h2>Ajustes</h2>
+    <button type="button" id="admBack" class="icon-btn" aria-label="Volver a la caja"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <h2>Administración de Kovo</h2>
   </div>
-  <div class="card" id="adminCard" hidden>
-    <h2 class="card-title">Administración de la app</h2>
-    <div class="mu">Solo lo ves vos. Para que un negocio nuevo se registre, creale un código de alta y pasáselo.</div>
+  <div class="card" id="adminCard">
+    <div class="mu">Solo lo ves vos. Acá están todos los negocios que usan Kovo.</div>
     <div class="stats" id="adminStats"></div>
+  </div>
+  <div class="card">
+    <h2 class="card-title">Negocios</h2>
+    <div class="row" id="adminFiltro" style="margin-top:10px"></div>
+    <div id="adminBiz" class="list-edit"></div>
+  </div>
+  <div class="card">
+    <h2 class="card-title">Sugerencias</h2>
+    <div id="adminSug" class="list-edit"></div>
+  </div>
+  <div class="card">
+    <h2 class="card-title">Códigos de alta</h2>
+    <div class="mu">Para que un negocio nuevo se registre, creale un código y pasáselo.</div>
     <label for="adminNote">Para quién es <span class="opt">(opcional)</span></label>
     <div class="row" style="flex-wrap:nowrap"><input id="adminNote" placeholder="Ej: Dietética Sol" autocomplete="off"><button type="button" id="adminNew" class="chip camb">Crear código</button></div>
     <div id="adminCodes" class="list-edit"></div>
-    <label>Precios por mes</label>
+  </div>
+  <div class="card">
+    <h2 class="card-title">Precios por mes</h2>
     <div class="row" style="flex-wrap:nowrap;align-items:flex-end">
       <div style="flex:1"><div class="mu">Primeros</div><input id="admSlots" type="number" inputmode="numeric"></div>
       <div style="flex:1.4"><div class="mu">Su primer mes</div><input id="admFounder" type="number" inputmode="numeric"></div>
@@ -124,10 +140,14 @@
     </div>
     <button type="button" class="btn sm" id="admPrecios" style="width:auto">Guardar precios</button>
     <div class="mu">Los primeros negocios que se suscriben pagan menos solo el primer mes. Después, todos pagan el precio normal.</div>
-    <label>Sugerencias</label>
-    <div id="adminSug" class="list-edit"></div>
-    <label>Negocios</label>
-    <div id="adminBiz" class="list-edit"></div>
+  </div>
+</div>
+
+<!-- Ajustes -->
+<div id="cfgbox" hidden>
+  <div class="cfg-head">
+    <button type="button" id="cfgBack" class="icon-btn" aria-label="Volver a la caja"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <h2>Ajustes</h2>
   </div>
   <div class="card mgr">
     <h2 class="card-title">Negocio</h2>
@@ -222,6 +242,11 @@
     <label for="pf">Lista de productos <span class="opt">(tocá el precio, el costo o el stock para cambiarlo)</span></label>
     <input id="pf" placeholder="Filtrar..." autocomplete="off">
     <div class="scroll"><table id="plist2" style="margin-top:10px"></table></div>
+  </div>
+  <div class="card" id="vistaCard" hidden>
+    <h2 class="card-title">Ver la app como</h2>
+    <div class="mu">Para ver qué le aparece a cada uno. Lo que anotes mientras tanto se guarda igual.</div>
+    <div class="row" id="vistaChips" style="margin-top:10px"></div>
   </div>
   <div class="card">
     <h2 class="card-title">Sugerencias</h2>
@@ -387,6 +412,6 @@
 </div>
 
 <div id="ticket"></div>
-<script type="module" src="js/app.js?v=15"></script>
+<script type="module" src="js/app.js?v=16"></script>
 </body>
 </html>
