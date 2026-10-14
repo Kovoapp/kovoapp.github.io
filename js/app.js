@@ -367,7 +367,7 @@ async function loadRefs(b) {
     q("fiados").order("created_at", { ascending: false })
   ]);
   if (bz.error && sinRed(bz.error) && cajaGuardada(b)) return;
-  $("adm").hidden = !(adm && adm.data);
+  esAdminApp = !!(adm && adm.data); $("adm").hidden = !esAdminApp;
   biz = bz.data; shops = sh.data || []; pays = pm.data || []; clientes = cl.data || []; provs = pv.data || []; catalog = pr.data || []; members = mb.data || [];
   fiados = (fd && !fd.error && fd.data) || [];
   costs = {}; (pc.data || []).forEach(c => costs[c.product_id] = num(c.cost));
@@ -1284,7 +1284,7 @@ async function leerImport(file) {
   const box = $("pimpRes"); box.textContent = "Leyendo " + file.name + "…"; importar = null;
   let res;
   try {
-    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=22");
+    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=23");
     res = armarProductos(await leerPlanilla(file));
   } catch (e) {
     box.innerHTML = ""; const d = document.createElement("div"); d.className = "imp-err";
@@ -1445,8 +1445,8 @@ function mostrarPantalla(cual) {
 function abrir(cual) { if (history.state && history.state.pantalla) history.replaceState({ pantalla: cual }, ""); else history.pushState({ pantalla: cual }, ""); mostrarPantalla(cual) }
 function cerrar() { if (history.state && history.state.pantalla) history.back(); else mostrarPantalla(null) }
 
-// Ver la app como cajero: el dueño o un administrador ve lo mismo que sus cajeros.
-let realRole = null;
+// Ver la app como cajero: solo para el administrador de Kovo, para revisar lo que ven los cajeros.
+let realRole = null, esAdminApp = false;
 async function verComo(r) {
   role = r; mostrarPantalla(null);
   if (history.state && history.state.pantalla) history.replaceState(null, "");
@@ -1454,7 +1454,7 @@ async function verComo(r) {
   toast(r === "cashier" ? "Ahora ves Kovo como un cajero" : "Volviste a ver Kovo como " + (realRole === "owner" ? "dueño" : "administrador"));
 }
 function pintaVista() {
-  const puede = realRole === "owner" || realRole === "admin", yo = realRole === "owner" ? "Dueño" : "Administrador";
+  const puede = esAdminApp && (realRole === "owner" || realRole === "admin"), yo = realRole === "owner" ? "Dueño" : "Administrador";
   $("vistaCard").hidden = !puede; $("vistaBanner").hidden = !puede || role === realRole;
   $("vistaVolver").textContent = "Volver a ver como " + yo.toLowerCase();
   if (puede) chips($("vistaChips"), [realRole, "cashier"], () => role, v => { if (v !== role) verComo(v) }, v => v === "cashier" ? "Cajero" : yo);
