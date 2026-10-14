@@ -46,3 +46,5 @@ jobs:
         run: node tests/mp.test.mjs
       - name: Probar la demo con datos de ejemplo
         run: node tests/demo.mjs
+      - name: Probar vender sin internet
+        run: node tests/sin-internet.mjs

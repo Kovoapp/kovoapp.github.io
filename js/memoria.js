@@ -30,10 +30,13 @@ window.crearMemoria = (opciones = {}) => {
     upsert(o, opt) { this.op = "upsert"; this.payload = o; this.conf = (opt && opt.onConflict || "id").split(","); return this }
     delete() { this.op = "delete"; return this }
     run() {
+      if (opciones.sinRed && opciones.sinRed()) return { data: null, error: { message: "TypeError: Failed to fetch" } };
       const T = db[this.t], m = r => this.f.every(f => f(r));
       let out;
       if (this.op === "insert") {
-        const rows = [].concat(this.payload).map(o => ({ ...defaults[this.t](), ...o })); T.push(...rows); out = rows;
+        const rows = [].concat(this.payload).map(o => ({ ...defaults[this.t](), ...o }));
+        if (rows.some(r => r.id && T.some(x => x.id === r.id))) return { data: null, error: { code: "23505", message: "duplicate key value violates unique constraint" } };
+        T.push(...rows); out = rows;
         // Igual que el disparador sales_cost: guarda el costo de lo vendido.
         if (this.t === "sales") rows.forEach(s => {
           let base = 0, cost = 0, n = 0;

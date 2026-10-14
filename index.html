@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="styles.css?v=20">
+<link rel="stylesheet" href="styles.css?v=21">
 </head>
 <body>
 
@@ -104,6 +104,7 @@
 
 <div id="vistaBanner" class="note vista" hidden>Estás viendo Kovo como lo ve un cajero. <button type="button" class="linkbtn" id="vistaVolver">Volver a ver como dueño</button></div>
 <div id="trialBanner" class="note" hidden style="margin-bottom:14px"></div>
+<div id="redAviso" class="note red-aviso" role="status" hidden></div>
 
 <!-- Panel de administración de Kovo (solo administradores de la app) -->
 <div id="adminbox" hidden>
@@ -435,8 +436,8 @@
 <div id="ticket"></div>
 <script>
   // Demo con datos de ejemplo (app/?demo): carga una base en memoria antes que la app.
-  if (/[?&]demo(=|&|$)/.test(location.search)) document.write('<script src="js/memoria.js?v=20"><\/script><script src="js/demo.js?v=20"><\/script>');
+  if (/[?&]demo(=|&|$)/.test(location.search)) document.write('<script src="js/memoria.js?v=21"><\/script><script src="js/demo.js?v=21"><\/script>');
 </script>
-<script type="module" src="js/app.js?v=20"></script>
+<script type="module" src="js/app.js?v=21"></script>
 </body>
 </html>
