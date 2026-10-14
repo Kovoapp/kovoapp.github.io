@@ -20,6 +20,10 @@ const store = {
   del(k) { try { localStorage.removeItem(k) } catch (e) { } }
 };
 
+// Errores de conexión: no son de la base, es que no hay internet.
+const sinRed = e => !navigator.onLine || /failed to fetch|networkerror|network request|load failed/i.test(String((e && (e.message || e)) || ""));
+const plural = (n, s) => n + " " + s + (n === 1 ? "" : "s");
+
 function errMsg(e) {
   const m = String((e && (e.message || e.error_description || e.code)) || e || "");
   if (/failed to fetch|network|load failed/i.test(m)) return "Sin conexión. Revisá internet y probá de nuevo.";
@@ -147,7 +151,11 @@ $("forgot").onclick = async () => {
   const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
   say("authMsg", error ? errMsg(error) : "Te mandamos un email para elegir una contraseña nueva.", !!error);
 };
-$$("[data-logout]").forEach(b => b.onclick = async () => { await sb.auth.signOut(); store.del("biz"); location.reload() });
+$$("[data-logout]").forEach(b => b.onclick = async () => {
+  const n = pendientes().length;
+  if (n && !await ask("Hay " + plural(n, "venta") + " anotadas sin internet que todavía no se subieron. Si cerrás sesión se pierden. ¿Cerrar igual?")) return;
+  await sb.auth.signOut(); ["biz", "cajaGuardada", "ventasPendientes", "ultimaVenta"].forEach(k => store.del(k)); location.reload();
+});
 
 // ---------------------------------------------------------------
 // Alta del negocio
@@ -210,6 +218,10 @@ $("joinForm").onsubmit = async e => {
 // ---------------------------------------------------------------
 async function enter() {
   const { data: mem, error } = await sb.from("members").select("business_id, role, display_name, user_id").eq("user_id", user.id);
+  if (error && sinRed(error)) {
+    const c = cajaGuardada();
+    if (c) { role = realRole = c.role; show("app"); startApp(); return }
+  }
   if (error) { aviso(errMsg(error)); return }
   if (!mem || !mem.length) {
     show("setup");
@@ -343,9 +355,48 @@ async function loadRefs(b) {
     isMgr() ? q("product_costs") : Promise.resolve({ data: [] }),
     sb.rpc("is_platform_admin")
   ]);
+  if (bz.error && sinRed(bz.error) && cajaGuardada(b)) return;
   $("adm").hidden = !(adm && adm.data);
   biz = bz.data; shops = sh.data || []; pays = pm.data || []; clientes = cl.data || []; provs = pv.data || []; catalog = pr.data || []; members = mb.data || [];
   costs = {}; (pc.data || []).forEach(c => costs[c.product_id] = num(c.cost));
+  if (biz) guardarCaja();
+}
+// Lo último que se cargó queda en el celular, para poder abrir la caja y vender sin internet.
+function guardarCaja() { store.set("cajaGuardada", JSON.stringify({ uid: user.id, role: realRole, biz, shops, pays, clientes, provs, catalog, members, costs })) }
+function cajaGuardada(b) {
+  let c = null; try { c = JSON.parse(store.get("cajaGuardada", "null")) } catch (e) { }
+  if (!c || c.uid !== user.id || !c.biz || (b && c.biz.id !== b)) return null;
+  ({ biz, shops, pays, clientes, provs, catalog, members, costs } = c);
+  return c;
+}
+
+// Ventas anotadas sin internet: quedan en el celular y se suben solas cuando vuelve la conexión.
+const pendientes = () => { try { return JSON.parse(store.get("ventasPendientes", "[]")) } catch (e) { return [] } };
+const guardarPend = l => { l.length ? store.set("ventasPendientes", JSON.stringify(l)) : store.del("ventasPendientes"); pintaRed() };
+let subiendo = false, avisoSubida = false;
+async function subirPendientes() {
+  if (subiendo || !navigator.onLine || !pendientes().length) return pintaRed();
+  subiendo = true; pintaRed();
+  let subidas = 0, error = null;
+  for (const row of pendientes()) {
+    const r = await sb.from("sales").insert(row);
+    // Si ya se había subido (se cortó justo después), la base la rechaza por repetida: está bien.
+    if (r.error && !/23505|duplicate key/i.test((r.error.code || "") + " " + r.error.message)) { error = r.error; break }
+    guardarPend(pendientes().filter(x => x.id !== row.id)); subidas++;
+  }
+  subiendo = false; pintaRed();
+  if (subidas) { toast("Listo: se " + (subidas === 1 ? "subió 1 venta anotada" : "subieron " + subidas + " ventas anotadas") + " sin internet"); if (isMgr()) refresh() }
+  if (error && !sinRed(error) && !avisoSubida) {
+    avisoSubida = true;
+    aviso("Hay " + plural(pendientes().length, "venta") + " anotadas sin internet que no se pudieron subir. " + errMsg(error) + " Quedan guardadas en este celular.");
+  }
+}
+function pintaRed() {
+  const el = $("redAviso"), n = pendientes().length, v = plural(n, "venta");
+  el.hidden = navigator.onLine && !n;
+  el.classList.toggle("off", !navigator.onLine);
+  el.textContent = !navigator.onLine ? "Sin internet. Podés seguir vendiendo: las ventas se guardan en este celular y se suben solas cuando vuelva la conexión." + (n ? " Sin subir: " + v + "." : "")
+    : subiendo ? "Subiendo " + v + " anotadas sin internet..." : v + " anotadas sin internet todavía sin subir. Se reintenta sola.";
 }
 
 let started = false;
@@ -359,7 +410,7 @@ function startApp() {
   $("tabs").hidden = !isMgr();
   $$(".mgr").forEach(e => e.hidden = !isMgr());
   $$(".owner-only").forEach(e => e.hidden = role !== "owner");
-  pintaPlan(); pintaVista(); cargarAlertas();
+  pintaPlan(); pintaVista(); cargarAlertas(); subirPendientes();
   if (!activeShops().find(s => s.id === local)) local = (activeShops()[0] || {}).id;
   renderLocales(); renderPagos(); renderCart(); renderClientes(); renderCatalog(); renderSettings(); pintaUndo();
   if (!started) { started = true; wireOnce() }
@@ -452,11 +503,14 @@ async function anotarVenta() {
   const may = isWholesale(local);
   if (may && !mcli) return say("msg", "Elegí un cliente de la lista.", true);
   $("enviar").disabled = true; $("imp").hidden = true;
-  const row = { business_id: biz.id, shop_id: local, day: isoF("vfecha") || hoy(), client_name: may ? mcli : "", payment: pago, amount: monto, paid_with: efectivo ? pagaV : 0, items: cart.map(l => ({ id: l.id, name: l.name, qty: l.qty, unit: l.unit, price: l.price })) };
-  const { data, error } = await sb.from("sales").insert(row).select().single();
+  const row = { id: crypto.randomUUID(), business_id: biz.id, shop_id: local, day: isoF("vfecha") || hoy(), client_name: may ? mcli : "", payment: pago, amount: monto, paid_with: efectivo ? pagaV : 0, items: cart.map(l => ({ id: l.id, name: l.name, qty: l.qty, unit: l.unit, price: l.price })) };
+  let { data, error } = navigator.onLine ? await sb.from("sales").insert(row).select().single() : { error: "sin internet" };
+  // Sin internet la venta queda en el celular con su hora, y se sube después.
+  const enCelu = !!error && sinRed(error);
+  if (enCelu) { data = { ...row, created_at: new Date().toISOString() }; guardarPend([...pendientes(), data]); error = null }
   $("enviar").disabled = false;
   if (error) return say("msg", errMsg(error), true);
-  say("msg", "✓ Venta anotada"); moverStock(data.items, -1);
+  say("msg", enCelu ? "✓ Venta guardada en el celular" : "✓ Venta anotada"); moverStock(data.items, -1);
   last = data; $("imp").hidden = false;
   ultima = { id: data.id, amount: monto, shop: shopName(local), payment: pago, at: Date.now(), items: data.items }; store.set("ultimaVenta", JSON.stringify(ultima)); pintaUndo();
   mcli = null; $("cbus").value = ""; $("cres").hidden = true; $("mdel").hidden = true;
@@ -471,6 +525,10 @@ function pintaUndo() {
 async function deshacer() {
   if (!ultima) return;
   if (!await ask("¿Eliminar la última venta: " + fmt(ultima.amount) + " en " + ultima.shop + " (" + ultima.payment + ")?")) return;
+  if (pendientes().some(x => x.id === ultima.id)) {
+    guardarPend(pendientes().filter(x => x.id !== ultima.id)); say("msg", "Venta eliminada"); moverStock(ultima.items, 1);
+    ultima = null; last = null; store.del("ultimaVenta"); pintaUndo(); $("imp").hidden = true; return;
+  }
   const { error, count } = await sb.from("sales").delete({ count: "exact" }).eq("id", ultima.id);
   if (error) return aviso(errMsg(error));
   if (count === 0) aviso("No se pudo eliminar: ya pasaron más de 15 minutos. Pedile al dueño que la borre desde Resumen.");
@@ -1132,7 +1190,7 @@ async function leerImport(file) {
   const box = $("pimpRes"); box.textContent = "Leyendo " + file.name + "…"; importar = null;
   let res;
   try {
-    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=20");
+    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=21");
     res = armarProductos(await leerPlanilla(file));
   } catch (e) {
     box.innerHTML = ""; const d = document.createElement("div"); d.className = "imp-err";
@@ -1464,6 +1522,16 @@ function wireOnce() {
 // ---------------------------------------------------------------
 // Arranque
 // ---------------------------------------------------------------
+// Sin internet, Supabase no puede renovar la sesión: se usa la que quedó guardada en el celular.
+function usuarioGuardado() {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (/^sb-.+-auth-token$/.test(k)) { const s = JSON.parse(localStorage.getItem(k)); if (s && s.user) return s.user }
+    }
+  } catch (e) { }
+  return null;
+}
 async function boot() {
   if (window.__SB__) sb = window.__SB__;
   else {
@@ -1475,7 +1543,9 @@ async function boot() {
     sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
   }
   const { data } = await sb.auth.getSession();
-  user = data.session && data.session.user;
+  user = (data.session && data.session.user) || (!navigator.onLine ? usuarioGuardado() : null);
+  addEventListener("online", subirPendientes); addEventListener("offline", pintaRed);
+  setInterval(subirPendientes, 30e3);
   if (user) await enter(); else show("auth");
   sb.auth.onAuthStateChange(async (ev, session) => {
     if (ev === "PASSWORD_RECOVERY") {
