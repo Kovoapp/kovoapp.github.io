@@ -6,7 +6,8 @@ const fails = [];
 const check = (ok, msg) => { console.log((ok ? "ok   " : "FAIL ") + msg); if (!ok) fails.push(msg) };
 const env = { SUPABASE_URL: "https://x.supabase.co", SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: "sb_secret_x", MP_ACCESS_TOKEN: "TEST-123" };
 
-function falso({ rol = "owner", trial = Date.now() + 5 * 864e5, pre = {}, cuota = {}, intro = false, preId = "pre-9" } = {}) {
+const B = "11111111-2222-3333-4444-555555555555";
+function falso({ rol = "owner", trial = Date.now() + 5 * 864e5, pre = {}, cuota = {}, intro = false, preId = "pre-9", pago = {} } = {}) {
   const calls = [];
   const biz = { id: "b1", name: "Dietética Ana", trial_ends_at: new Date(trial).toISOString(), mp_preapproval_id: preId, mp_status: "authorized" };
   const fetch = async (url, opts = {}) => {
@@ -19,7 +20,9 @@ function falso({ rol = "owner", trial = Date.now() + 5 * 864e5, pre = {}, cuota 
     if (url.includes("/rest/v1/platform_settings?")) return ok([{ regular_price: 18000 }]);
     if (url.endsWith("/rpc/mp_set_price")) return ok(null);
     if (url.endsWith("/rpc/subscription_price")) return ok(15000);
-    if (url.endsWith("/rpc/mp_attach") || url.endsWith("/rpc/mp_apply")) return ok(true);
+    if (url.endsWith("/rpc/mp_attach") || url.endsWith("/rpc/mp_apply") || url.endsWith("/rpc/mp_pay_month")) return ok(true);
+    if (url === "https://api.mercadopago.com/checkout/preferences") return ok({ id: "pref-1", init_point: "https://mp/checkout/pref-1" });
+    if (url.includes("/v1/payments/")) return ok({ id: 5, status: "approved", external_reference: "otra-cosa", transaction_amount: 15000, ...pago });
     if (url === "https://api.mercadopago.com/preapproval") return ok({ id: "pre-1", init_point: "https://mp/checkout/pre-1", status: "pending" });
     if (url.endsWith("/ajena")) return { ok: false, status: 401, text: async () => JSON.stringify({ message: "unauthorized" }) };
     if (url.endsWith("/123456")) return { ok: false, status: 404, text: async () => JSON.stringify({ message: "not found" }) };
@@ -49,6 +52,25 @@ const llamado = (calls, fin) => calls.find(c => c.url.endsWith(fin));
   await crearSuscripcion({ env, fetch: f.fetch, authHeader: "Bearer buena", body: { business_id: "b1", action: "suscribir", payer_email: "otro@mp.com" } });
   const p = llamado(f.calls, "/preapproval").body;
   check(!p.auto_recurring.start_date && p.payer_email === "otro@mp.com", "con la prueba vencida cobra enseguida y acepta otro email de Mercado Pago");
+}
+{ // Pagar un mes, sin suscripción
+  let f = falso();
+  let out = await crearSuscripcion({ env, fetch: f.fetch, authHeader: "Bearer buena", body: { business_id: "b1", action: "pagar_mes" } });
+  const p = llamado(f.calls, "/checkout/preferences");
+  check(out.status === 200 && out.body.init_point === "https://mp/checkout/pref-1" && !llamado(f.calls, "/preapproval"), "pagar un mes abre el pago común de Mercado Pago, no una suscripción");
+  check(p.body.items[0].unit_price === 15000 && p.body.items[0].currency_id === "ARS" && p.body.external_reference === "mes:b1", "por el precio del mes, con el negocio");
+  check(p.body.notification_url === "https://x.supabase.co/functions/v1/mp-webhook" && p.body.back_urls.success.includes("pago=ok"), "avisa a Kovo cuando se paga y vuelve a la caja");
+  f = falso({ rol: "cashier" });
+  out = await crearSuscripcion({ env, fetch: f.fetch, authHeader: "Bearer buena", body: { business_id: "b1", action: "pagar_mes" } });
+  check(out.status === 403 && !llamado(f.calls, "/checkout/preferences"), "un cajero no puede pagar");
+  f = falso({ pago: { external_reference: "mes:" + B } });
+  out = await procesarAviso({ env, fetch: f.fetch, url: "https://x/functions/v1/mp-webhook?data.id=5&type=payment", body: { type: "payment", data: { id: "5" } } });
+  const pm = llamado(f.calls, "/rpc/mp_pay_month");
+  check(out.status === 200 && pm && pm.body.p_business === B && pm.body.p_payment === "5" && pm.body.p_amount === 15000, "un pago aprobado le suma el mes al negocio");
+  check(f.calls.some(c => c.url.endsWith("/v1/payments/5") && c.headers.Authorization === "Bearer TEST-123"), "no confía en el aviso: le pregunta el pago a Mercado Pago");
+  f = falso({ pago: { external_reference: "mes:" + B, status: "pending" } });
+  await procesarAviso({ env, fetch: f.fetch, url: "https://x/functions/v1/mp-webhook?topic=payment&id=5", body: {} });
+  check(f.calls.some(c => c.url.endsWith("/v1/payments/5")) && !llamado(f.calls, "/rpc/mp_pay_month"), "un pago pendiente (por ejemplo en Rapipago) todavía no suma nada");
 }
 { // Permisos
   let f = falso({ rol: "cashier" });
@@ -96,7 +118,7 @@ const llamado = (calls, fin) => calls.find(c => c.url.endsWith(fin));
   check(f.calls.some(c => c.url.endsWith("/authorized_payments/77")) && llamado(f.calls, "/rpc/mp_apply"), "un aviso de cuota cobrada busca su suscripción y la actualiza");
   f = falso();
   out = await procesarAviso({ env, fetch: f.fetch, url: "https://x/functions/v1/mp-webhook", body: { type: "payment", data: { id: "5" } } });
-  check(out.status === 200 && !llamado(f.calls, "/rpc/mp_apply"), "ignora avisos que no son de suscripciones");
+  check(out.status === 200 && !llamado(f.calls, "/rpc/mp_apply") && !llamado(f.calls, "/rpc/mp_pay_month"), "ignora pagos que no son de Kovo");
   f = falso();
   await procesarAviso({ env, fetch: f.fetch, url: "https://x/functions/v1/mp-webhook", body: { type: "subscription_preapproval", data: { id: "pre-1" }, status: "authorized" } });
   check(f.calls.some(c => c.url.endsWith("/preapproval/pre-1") && c.headers.Authorization === "Bearer TEST-123"), "no confía en el aviso: vuelve a preguntarle a Mercado Pago");

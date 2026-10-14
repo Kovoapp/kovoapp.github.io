@@ -58,6 +58,7 @@
       const uid = session.user.id;
       const admin = db.platform_admins.some(a => a.user_id === uid);
       if (name === "subscription_price") { const b = db.businesses.find(x => x.id === a.b); const s = db.platform_settings[0]; return { data: (b && b.price) || (db.businesses.filter(x => x.price).length < s.founder_slots ? s.founder_price : s.regular_price), error: null } }
+      if (name === "admin_mark_paid") { const b = db.businesses.find(x => x.id === a.p_business); if (!admin) return { data: null, error: { message: "not_allowed" } }; const desde = Math.max(Date.now(), new Date(b.trial_ends_at || 0).getTime(), new Date(b.paid_until || 0).getTime()); b.paid_until = new Date(desde + 30 * 864e5).toISOString(); if (b.plan !== "free") b.plan = "active"; return { data: b.paid_until, error: null } }
       if (name === "admin_set_free") { const b = db.businesses.find(x => x.id === a.p_business); if (!admin) return { data: null, error: { message: "not_allowed" } }; b.plan = a.p_free ? "free" : "trial"; return { data: null, error: null } }
       if (name === "raise_prices") {
         let n = 0;
@@ -78,7 +79,7 @@
       if (name === "admin_suggestions") return { data: admin ? db.suggestions.map(x => ({ id: x.id, body: x.body, created_at: x.created_at, done: x.done, business: (db.businesses.find(b => b.id === x.business_id) || {}).name, email: String(x.user_id).replace(/^u-/, "") })) : [], error: null };
       if (name === "is_platform_admin") return { data: admin, error: null };
       if (name === "admin_user_count") return { data: admin ? new Set(db.members.map(m => m.user_id)).size : null, error: null };
-      if (name === "admin_overview") return { data: admin ? db.businesses.map(b => ({ business_id: b.id, name: b.name, created_at: b.created_at, plan: b.plan, trial_ends_at: b.trial_ends_at, owner_email: b.created_by.replace(/^u-/, ""), members: db.members.filter(m => m.business_id === b.id).length, sales_30d: db.sales.filter(s => s.business_id === b.id).length })) : [], error: null };
+      if (name === "admin_overview") return { data: admin ? db.businesses.map(b => ({ business_id: b.id, name: b.name, created_at: b.created_at, plan: b.plan, trial_ends_at: b.trial_ends_at, owner_email: b.created_by.replace(/^u-/, ""), members: db.members.filter(m => m.business_id === b.id).length, sales_30d: db.sales.filter(s => s.business_id === b.id).length, price: b.price || null, paid_until: b.paid_until || null })) : [], error: null };
       if (name === "create_business") {
         const sc = db.signup_codes.find(c => c.code === String(a.p_code || "").trim().toUpperCase() && !c.used_by);
         if (!sc && !admin) return { data: null, error: { message: "invalid_signup_code" } };

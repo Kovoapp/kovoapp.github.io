@@ -10,5 +10,7 @@ PSQL=(psql "$PGURL" -v ON_ERROR_STOP=1 -q -t -o /dev/null)
 "${PSQL[@]}" -f ../alta.sql
 "${PSQL[@]}" -f ../pagos.sql
 "${PSQL[@]}" -f ../costos.sql
+"${PSQL[@]}" -f ../pago-mes.sql
 "${PSQL[@]}" -f rls_test.sql
 "${PSQL[@]}" -f costos_test.sql
+"${PSQL[@]}" -f pago_mes_test.sql

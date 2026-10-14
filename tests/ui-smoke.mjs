@@ -119,6 +119,9 @@ for (const [w, h, scheme] of [[390, 844, "light"], [1100, 900, "dark"]]) {
   await page.click("#planBtn");
   await page.waitForFunction(() => window.__SB__.__db.fn_calls.length === 1);
   check(await page.evaluate(() => { const c = window.__SB__.__db.fn_calls[0]; return c.name === "mp-suscribir" && c.body.action === "suscribir" && c.body.business_id === window.__SB__.__db.businesses[0].id }), "Suscribirme pide el link de pago a Mercado Pago");
+  await page.click("#planMes");
+  await page.waitForFunction(() => window.__SB__.__db.fn_calls.length === 2);
+  check(await page.evaluate(() => window.__SB__.__db.fn_calls[1].body.action === "pagar_mes"), "Pagar un mes pide el pago común de Mercado Pago (sin tarjeta de crédito)");
   await page.evaluate(() => { window.__SB__.__db.businesses[0].trial_ends_at = new Date(Date.now() - 864e5).toISOString() });
   await page.click("#cbizSave");
   await page.waitForFunction(() => document.getElementById("planEstado").textContent === "Plan vencido");
@@ -128,6 +131,15 @@ for (const [w, h, scheme] of [[390, 844, "light"], [1100, 900, "dark"]]) {
   await page.click("#adminBiz .linkbtn"); await page.click(".ov .chip.on");
   await page.waitForFunction(() => document.getElementById("planEstado").textContent === "Acceso sin cargo");
   check(!(await page.isDisabled("#enviar")), "el administrador puede dar acceso gratis");
+  await page.waitForFunction(() => document.getElementById("adminBiz").textContent.includes("Quitar acceso gratis"));
+  await page.click("#adminBiz .linkbtn"); await page.click(".ov .chip.on");
+  await page.waitForFunction(() => document.getElementById("planEstado").textContent === "Plan vencido");
+  await page.waitForFunction(() => document.getElementById("adminBiz").textContent.includes("Dar acceso gratis"));
+  await page.click("#adminBiz .linkbtn:nth-of-type(2)"); await page.click(".ov .chip.on");
+  await page.waitForFunction(() => document.getElementById("planEstado").textContent === "Mes pagado");
+  check(!(await page.isDisabled("#enviar")) && (await page.textContent("#planDetalle")).includes("Podés usar la caja hasta el"), "el administrador anota un mes pagado (por transferencia) y el negocio vuelve a vender");
+  await page.waitForFunction(() => document.getElementById("adminBiz").textContent.includes("Pagando (hasta"));
+  check(true, "y en el panel figura como pagando");
   await page.click("#admBack");
   // Ver la app como cajero y volver
   await page.click("#cfg");
