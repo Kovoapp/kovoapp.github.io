@@ -188,3 +188,16 @@ footer .marca img{width:26px;height:26px;border-radius:8px}
 .quien p{color:var(--mu);margin-top:12px}
 .quien .btn{margin-top:20px}
 @media (max-width:600px){.quien{flex-direction:column;align-items:center;text-align:center;padding:24px 20px}}
+
+/* Páginas legales */
+.legal{max-width:760px}
+.legal .act{margin-top:10px;font-size:15px}
+.legal h2{font-size:22px;margin:32px 0 10px}
+.legal p,.legal li{font-size:17px;line-height:1.6}
+.legal p+p{margin-top:12px}
+.legal ul{padding-left:22px;margin:10px 0;display:grid;gap:8px}
+.legal a{color:var(--ac);font-weight:600}
+.legal .btn{color:#fff}.legal .btn.sec{color:var(--tx)}
+.legal mark{background:#ffe08a;padding:0 4px;border-radius:4px}
+footer .legales{margin-top:14px;gap:18px;font-size:13px}
+footer .legales a{font-weight:500;color:var(--mu)}

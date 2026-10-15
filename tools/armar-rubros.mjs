@@ -154,7 +154,7 @@ function pagina(r) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="../estilo.css?v=3">
+<link rel="stylesheet" href="../estilo.css?v=4">
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
 </head>
 <body>
@@ -237,6 +237,7 @@ ${faq.map(([q, a]) => `    <details><summary>${esc(q)}</summary><p>${esc(a)}</p>
     <span>La caja de tu negocio, en el celular.</span>
     <span style="margin-left:auto;display:flex;gap:16px"><a href="../guias/">Guías</a><a class="wa" href="#" target="_blank" rel="noopener">WhatsApp</a><a href="../app/">Entrar</a></span>
   </div>
+  <div class="wrap legales"><a href="../terminos/">Términos y condiciones</a><a href="../privacidad/">Privacidad</a><a href="../baja/">Darse de baja</a><a href="../arrepentimiento/">Botón de arrepentimiento</a></div>
 </footer>
 
 <script>

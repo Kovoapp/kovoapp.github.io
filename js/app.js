@@ -143,7 +143,7 @@ function show(screen) {
 let signup = false;
 function authMode(s) {
   signup = s; $("tabLogin").classList.toggle("on", !s); $("tabSignup").classList.toggle("on", s);
-  $("authBtn").textContent = s ? "Crear cuenta" : "Entrar"; $("apass").autocomplete = s ? "new-password" : "current-password"; $("forgot").hidden = s; say("authMsg", "");
+  $("authBtn").textContent = s ? "Crear cuenta" : "Entrar"; $("apass").autocomplete = s ? "new-password" : "current-password"; $("forgot").hidden = s; $("aLegal").hidden = !s; say("authMsg", "");
 }
 $("tabLogin").onclick = () => authMode(false);
 $("tabSignup").onclick = () => authMode(true);
@@ -1301,7 +1301,7 @@ async function leerImport(file) {
   const box = $("pimpRes"); box.textContent = "Leyendo " + file.name + "…"; importar = null;
   let res;
   try {
-    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=26");
+    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=27");
     res = armarProductos(await leerPlanilla(file));
   } catch (e) {
     box.innerHTML = ""; const d = document.createElement("div"); d.className = "imp-err";
