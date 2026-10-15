@@ -1255,7 +1255,18 @@ function renderCatalog() {
       upd("products", p.id, { stock: /^\+/.test(t) && hayStock(p) ? num(p.stock) + v : v });
     };
     const c3 = td(); c3.appendChild(delBtn(async () => { if (await ask("¿Borrar " + p.name + "?")) { const { error } = await sb.from("products").delete().eq("id", p.id); error ? aviso(errMsg(error)) : reloadRefs() } }));
-    tr.append(td(p.name + (p.code ? " · " + p.code : "")), c2, cs, c3); t.appendChild(tr);
+    // Unidad o kilo: se puede cambiar después de cargarlo o importarlo. Las ventas ya hechas guardan su propia unidad.
+    const c1 = td(p.name + (p.code ? " · " + p.code : ""));
+    const un = document.createElement("span"); un.className = "costo unidad"; un.title = "Cambiar si se vende por unidad o por kilo";
+    un.textContent = (p.unit === "kg" ? "por kilo" : "por unidad") + " ✎";
+    un.onclick = async () => {
+      const kg = p.unit !== "kg";
+      let m = `¿Vender ${p.name} ${kg ? "por kilo" : "por unidad"}? El precio de ${fmt(p.price)} pasa a ser ${kg ? "por kilo" : "por unidad"}.`;
+      if (hayStock(p)) m += ` El stock (${num(p.stock).toLocaleString("es-AR")}) pasa a contarse en ${kg ? "kilos" : "unidades"}: revisalo después.`;
+      if (await ask(m)) upd("products", p.id, { unit: kg ? "kg" : "u" });
+    };
+    c1.appendChild(un);
+    tr.append(c1, c2, cs, c3); t.appendChild(tr);
   });
 }
 
@@ -1290,7 +1301,7 @@ async function leerImport(file) {
   const box = $("pimpRes"); box.textContent = "Leyendo " + file.name + "…"; importar = null;
   let res;
   try {
-    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=24");
+    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=25");
     res = armarProductos(await leerPlanilla(file));
   } catch (e) {
     box.innerHTML = ""; const d = document.createElement("div"); d.className = "imp-err";
