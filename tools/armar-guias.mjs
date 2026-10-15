@@ -112,8 +112,8 @@ function marco({ titulo, desc, url, img, ld, pre, cuerpo }) {
 <meta property="og:title" content="${esc(titulo)} · Kovo">
 <meta property="og:description" content="${esc(desc)}">
 <meta property="og:image" content="${img}">
-<link rel="icon" href="${pre}icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="${pre}icons/icon-192.png">
+<link rel="icon" href="${pre}icons/logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="${pre}icons/icon-192.png?v=2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
@@ -124,7 +124,7 @@ function marco({ titulo, desc, url, img, ld, pre, cuerpo }) {
 <!-- Generado por tools/armar-guias.mjs: cambiá los textos ahí, no acá. -->
 <header id="top">
   <div class="wrap nav">
-    <a class="marca" href="${pre}"><img src="${pre}icons/icon.svg" alt="">Kovo</a>
+    <a class="marca" href="${pre}"><img src="${pre}icons/logo.svg" alt="">Kovo</a>
     <nav class="links"><a href="${pre}guias/">Guías</a><a href="${pre}app/?demo">Demo</a><a href="${pre}#precio">Precio</a></nav>
     <a class="btn sec" href="${pre}app/">Entrar</a>
   </div>
@@ -144,7 +144,7 @@ ${cuerpo}
 
 <footer>
   <div class="wrap">
-    <a class="marca" href="${pre}"><img src="${pre}icons/icon.svg" alt="">Kovo</a>
+    <a class="marca" href="${pre}"><img src="${pre}icons/logo.svg" alt="">Kovo</a>
     <span>La caja de tu negocio, en el celular.</span>
     <span style="margin-left:auto;display:flex;gap:16px"><a href="${pre}guias/">Guías</a><a class="wa" href="#" target="_blank" rel="noopener">WhatsApp</a><a href="${pre}app/">Entrar</a></span>
   </div>
