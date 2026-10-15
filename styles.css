@@ -1,21 +1,21 @@
 /* Layout: una columna tipo mostrador; en celular la navegación va abajo, al alcance del pulgar */
 :root{
-  --bg:#f2f4ef;--card:#ffffff;--tx:#17231b;--mu:#5d6a60;--bd:#dde3da;--bd2:#c9d2c6;
-  --ac:#2c7a4b;--ac-ink:#ffffff;--ac2:#e3f0e6;--ac3:#cfe5d6;
+  --bg:#f3f4f8;--card:#ffffff;--tx:#1b1f3b;--mu:#5c6180;--bd:#dfe1ea;--bd2:#c8cbdb;
+  --ac:#1b1f3b;--ac-ink:#ffffff;--ac2:#ecf9d6;--ac3:#d3f0a6;--lima:#b8f35a;
   --rd:#b3261e;--rd2:#fbeae8;--wa:#8a5a00;--wa2:#fff4dc;
-  --shadow:0 1px 2px rgba(23,35,27,.06),0 4px 14px rgba(23,35,27,.05);
+  --shadow:0 1px 2px rgba(27,31,59,.06),0 4px 14px rgba(27,31,59,.05);
   --f-ui:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --f-num:"Bricolage Grotesque","Figtree",system-ui,sans-serif;
   --r:14px;--nav-h:68px;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#121613;--card:#1c221d;--tx:#e9efe9;--mu:#9aa79c;--bd:#2c352e;--bd2:#3a453c;
-  --ac:#5cbf84;--ac-ink:#0d1f13;--ac2:#1f3326;--ac3:#28452f;
+  --bg:#11132a;--card:#1b1f3b;--tx:#eceef7;--mu:#9da1bf;--bd:#2c3156;--bd2:#3b4068;
+  --ac:#b8f35a;--ac-ink:#1b1f3b;--ac2:#2b3a2c;--ac3:#3c5530;--lima:#b8f35a;
   --rd:#ff8a80;--rd2:#3a1f1d;--wa:#f2c46b;--wa2:#352a14;
   --shadow:0 1px 2px rgba(0,0,0,.3);color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#121613;--card:#1c221d;--tx:#e9efe9;--mu:#9aa79c;--bd:#2c352e;--bd2:#3a453c;
-  --ac:#5cbf84;--ac-ink:#0d1f13;--ac2:#1f3326;--ac3:#28452f;
+  --bg:#11132a;--card:#1b1f3b;--tx:#eceef7;--mu:#9da1bf;--bd:#2c3156;--bd2:#3b4068;
+  --ac:#b8f35a;--ac-ink:#1b1f3b;--ac2:#2b3a2c;--ac3:#3c5530;--lima:#b8f35a;
   --rd:#ff8a80;--rd2:#3a1f1d;--wa:#f2c46b;--wa2:#352a14;
   --shadow:0 1px 2px rgba(0,0,0,.3);color-scheme:dark}
 *{box-sizing:border-box}
@@ -28,7 +28,7 @@ button{font-family:inherit}
 /* Encabezado */
 .top{display:flex;align-items:center;gap:12px;padding:6px 0 14px}
 .brand{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
-.logo{width:40px;height:40px;border-radius:12px;background:var(--ac);color:var(--ac-ink);display:grid;place-items:center;flex:0 0 auto}
+.logo{width:40px;height:40px;border-radius:12px;background:#1b1f3b;color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);display:grid;place-items:center;flex:0 0 auto}
 .brand h1{font-family:var(--f-num);font-size:21px;font-weight:700;letter-spacing:-.01em;margin:0;line-height:1.1}
 .brand .hoy{font-size:13px;color:var(--mu)}
 .icon-btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx);display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
@@ -211,6 +211,6 @@ textarea:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px var(--ac
 .note.vista .linkbtn{padding:2px 0;font-size:14px}
 
 /* Demo con datos de ejemplo */
-.demo-aviso{background:var(--ac);color:#fff;font-size:14px;line-height:1.4;padding:10px 16px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;justify-content:center;text-align:center}
-.demo-aviso a{color:#fff;font-weight:700}
+.demo-aviso{background:var(--ac);color:var(--ac-ink);font-size:14px;line-height:1.4;padding:10px 16px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;justify-content:center;text-align:center}
+.demo-aviso a{color:var(--ac-ink);font-weight:700}
 .demo #planCard,.demo #trialBanner{display:none!important}
