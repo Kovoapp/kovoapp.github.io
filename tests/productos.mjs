@@ -66,6 +66,28 @@ check(P("Yerba").price === 3200 && P("Yerba").cost === 2100 && P("Yerba").code =
 check(P("Almendras peladas").unit === "kg" && P("Almendras peladas").stock === 5 && P("Almendras peladas").cost === 8000, "crea los nuevos con unidad, stock y costo");
 check(P("Maní").price === 1500, 'entiende "1.500" como mil quinientos');
 
+// Cambiar de unidad a kilo (y al revés) un producto ya cargado
+const fila = n => page.locator("#plist2 tr", { hasText: n });
+await page.waitForFunction(() => document.getElementById("plist2").textContent.includes("Maní"));
+check((await fila("Maní").textContent()).includes("por unidad"), "la lista muestra si se vende por unidad o por kilo");
+await fila("Maní").locator(".unidad").click();
+check((await page.textContent(".ov")).includes("¿Vender Maní por kilo? El precio de $1.500 pasa a ser por kilo."), "pregunta antes de pasarlo a kilo");
+await confirmar();
+await page.waitForFunction(() => window.__SB__.__db.products.find(p => p.name === "Maní").unit === "kg");
+await page.waitForFunction(() => document.getElementById("plist2").textContent.includes("$1.500 /kg"));
+check(true, "pasa a venderse por kilo");
+await fila("Almendras peladas").locator(".unidad").click();
+check((await page.textContent(".ov")).includes("El stock (5) pasa a contarse en unidades"), "si controla stock, avisa que cambia cómo se cuenta");
+await confirmar();
+await page.waitForFunction(() => window.__SB__.__db.products.find(p => p.name === "Almendras peladas").unit === "u");
+check(true, "y vuelve a venderse por unidad");
+await snap("unidad-kilo");
+// Los deja como estaban para el resto de la prueba.
+for (const [n, u] of [["Maní", "u"], ["Almendras peladas", "kg"]]) {
+  await fila(n).locator(".unidad").click(); await confirmar();
+  await page.waitForFunction(([n, u]) => window.__SB__.__db.products.find(p => p.name === n).unit === u, [n, u]);
+}
+
 // Importar desde CSV
 await page.click("#pimpBtn");
 await page.setInputFiles("#pimpFile", { name: "lista.csv", mimeType: "text/csv", buffer: await readFile(join(root, "tests/fixtures/productos.csv")) });
