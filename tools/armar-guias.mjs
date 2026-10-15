@@ -106,7 +106,7 @@ function marco({ titulo, desc, url, img, ld, pre, cuerpo }) {
 <title>${esc(titulo)} · Kovo</title>
 <meta name="description" content="${esc(desc)}">
 <link rel="canonical" href="${url}">
-<meta name="theme-color" content="#2c7a4b">
+<meta name="theme-color" content="#1b1f3b">
 <meta property="og:type" content="article">
 <meta property="og:url" content="${url}">
 <meta property="og:title" content="${esc(titulo)} · Kovo">

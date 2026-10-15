@@ -1,4 +1,4 @@
-// Capturas de la página principal (sitio/img/), sacadas de la demo del almacén.
+// Capturas de la página principal y de las páginas por rubro (sitio/img/), sacadas de la demo.
 // Uso: PLAYWRIGHT_MODULE=... node tools/capturas-portada.mjs
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
@@ -46,4 +46,28 @@ await foto("resumen");
 await tab("balance");
 await page.waitForFunction(() => document.querySelectorAll("#mesTop tr").length > 0);
 await foto("balance");
+
+// Sección "Probalo ahora": el cierre de caja del resumen.
+await tab("resumen");
+await foto("demo", await page.evaluate(() => document.getElementById("cierreTop").closest(".card").getBoundingClientRect().top + scrollY - 16));
+
+// Una captura de Vender por rubro, con una venta típica en el carrito.
+const RUBROS = {
+  almacen: [["Yerba", 1], ["Queso", 350], ["Leche", 2]],
+  kiosco: [["Alfajor", 2], ["Gaseosa", 1], ["Chicles", 1]],
+  dietetica: [["Almendras", 250], ["Avena", 500], ["Pasas", 200]],
+  verduleria: [["Papa", 2000], ["Tomate", 1000], ["Lechuga", 1]],
+  carniceria: [["Asado", 1500], ["Vacío", 1200], ["Milanesa", 800]],
+};
+for (const [slug, items] of Object.entries(RUBROS)) {
+  await page.goto(base + "?demo=" + slug);
+  await page.waitForSelector("#screen-app:not([hidden])");
+  await page.addStyleTag({ content: ".demo-aviso,.toast,#stockAviso,#vfwrap{display:none!important} :focus{outline:none!important}" });
+  for (const [q, n] of items) {
+    await page.fill("#busq", q); await page.click("#res .chip");
+    const inp = page.locator("#cart .cq").last(); await inp.fill(String(n)); await inp.dispatchEvent("input");
+  }
+  await page.fill("#busq", "");
+  await foto("rubro-" + slug);
+}
 await browser.close(); server.close();
