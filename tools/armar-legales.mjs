@@ -12,10 +12,10 @@ const ACTUALIZADO = "15 de octubre de 2026";
 
 // Datos del titular de Kovo. Si falta alguno, la página lo muestra marcado para completarlo.
 const DATOS = {
-  titular: "",   // nombre completo o razón social
+  titular: "Vicente Sampol (Kovo)", // nombre completo o razón social
   cuit: "20-48162358-9",
   domicilio: "San Pedro, provincia de Buenos Aires", // ciudad y provincia, o domicilio completo
-  email: "",     // para datos personales, bajas y arrepentimiento
+  email: "vicentesampol39@gmail.com", // para datos personales, bajas y arrepentimiento
 };
 const d = k => DATOS[k] ? esc(DATOS[k]) : `<mark>[falta: ${k}]</mark>`;
 const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
