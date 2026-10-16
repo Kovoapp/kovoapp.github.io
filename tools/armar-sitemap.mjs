@@ -5,7 +5,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SITIO = join(dirname(fileURLToPath(import.meta.url)), "..", "sitio");
-const URL = "https://kovoapp.github.io/";
+const URL = "https://appkovo.com/";
 const paginas = (await readdir(SITIO, { recursive: true }))
   .filter(f => f.endsWith("index.html")).map(f => f.replace(/\\/g, "/").replace(/index\.html$/, ""))
   .sort((a, b) => a.split("/").length - b.split("/").length || a.localeCompare(b));

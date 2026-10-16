@@ -6,7 +6,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const URL = "https://kovoapp.github.io/";
+const URL = "https://appkovo.com/";
 const TEL = "5493329593188";
 const ACTUALIZADO = "15 de octubre de 2026";
 

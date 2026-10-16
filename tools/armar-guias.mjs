@@ -5,7 +5,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SITIO = join(dirname(fileURLToPath(import.meta.url)), "..", "sitio");
-const URL = "https://kovoapp.github.io/";
+const URL = "https://appkovo.com/";
 
 // Cada paso: [título, texto, captura (sitio/img/guias/<captura>.jpg) o null, texto alternativo].
 const GUIAS = [
@@ -14,7 +14,7 @@ const GUIAS = [
     desc: "Creá tu cuenta y dejá listo tu negocio con sus locales y medios de pago en un minuto.",
     intro: "Para empezar solo necesitás un email y una contraseña. Lo demás se puede cambiar después desde Ajustes.",
     pasos: [
-      ["Creá tu cuenta", "Entrá a kovoapp.github.io/app, tocá Crear cuenta y poné tu email y una contraseña de al menos 8 caracteres. Con esa cuenta entrás desde cualquier celular o computadora.", "cuenta", "Pantalla de Kovo para crear la cuenta con email y contraseña"],
+      ["Creá tu cuenta", "Entrá a appkovo.com/app, tocá Crear cuenta y poné tu email y una contraseña de al menos 8 caracteres. Con esa cuenta entrás desde cualquier celular o computadora.", "cuenta", "Pantalla de Kovo para crear la cuenta con email y contraseña"],
       ["Cargá los datos del negocio", "Escribí el nombre del negocio y tu nombre. Si tenés más de un local, agregalos: cada uno tiene su propia caja. Marcá los medios de pago que aceptás y tocá Crear mi negocio.", "alta", "Formulario de alta del negocio con nombre, locales y medios de pago"],
       ["Listo, ya podés vender", "Arrancás con 7 días de prueba gratis. El siguiente paso es cargar tus productos, aunque también podés anotar ventas poniendo solo el monto.", null, ""],
     ],
@@ -69,7 +69,7 @@ const GUIAS = [
     intro: "Cada empleado entra con su propia cuenta. Los cajeros solo ven la pantalla de Vender y sus propias ventas.",
     pasos: [
       ["Generá el código", "En Ajustes, en la tarjeta Equipo, tocá Código para cajero. Copialo y mandáselo a tu empleado. Vence en 7 días y sirve una sola vez.", "equipo", "Tarjeta Equipo con un código de invitación para cajero"],
-      ["Tu empleado se une", "Tu empleado entra a kovoapp.github.io/app, crea su cuenta, toca Me invitaron y pone el código y su nombre. Ya puede vender.", null, ""],
+      ["Tu empleado se une", "Tu empleado entra a appkovo.com/app, crea su cuenta, toca Me invitaron y pone el código y su nombre. Ya puede vender.", null, ""],
     ],
   },
   {
