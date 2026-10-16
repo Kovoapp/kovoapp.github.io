@@ -31,7 +31,7 @@ La "anon key" es pública por diseño. Lo que protege los datos son las reglas d
 ### 2. Publicar la página (GitHub Pages)
 
 1. En este repositorio, abrí **Settings → Pages** y en **Source** elegí **GitHub Actions**.
-2. Cada cambio en la rama `main` se publica solo. La dirección queda así: `https://kovoapp.github.io/` (presentación) y `https://kovoapp.github.io/app/` (la caja).
+2. Cada cambio en la rama `main` se publica solo. La dirección queda así: `https://appkovo.com/` (presentación) y `https://appkovo.com/app/` (la caja).
 3. Volvé a Supabase, abrí **Authentication → URL Configuration** y poné esa dirección en **Site URL**. Así los emails de confirmación y de "olvidé la contraseña" llevan a tu página.
 
 ### 3. Vos como administrador

@@ -5,7 +5,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SITIO = join(dirname(fileURLToPath(import.meta.url)), "..", "sitio");
-const URL = "https://kovoapp.github.io/";
+const URL = "https://appkovo.com/";
 
 const RUBROS = [
   {
