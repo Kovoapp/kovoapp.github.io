@@ -27,6 +27,11 @@
       ["Carne picada común", 7800, "kg", 5400, 15], ["Bife de chorizo", 15900, "kg", 11400, 9], ["Matambre", 13200, "kg", 9400, 0],
       ["Pollo entero", 4300, "kg", 3000, 20], ["Pechuga", 7900, "kg", 5600, 8], ["Chorizo", 8200, "kg", 5600, 10],
       ["Morcilla", 6200, "kg", 4100, 6], ["Costilla de cerdo", 9200, "kg", 6500, 7], ["Achuras (molleja)", 16500, "kg", 11800, 3]]],
+    peluqueria: ["Peluquería Estilo", [
+      ["Corte de dama", 12000, "u", 1500, null], ["Corte de caballero", 8000, "u", 900, null], ["Barba", 5000, "u", 500, null],
+      ["Color", 25000, "u", 7000, null], ["Mechas", 35000, "u", 9500, null], ["Brushing", 7000, "u", 800, null],
+      ["Alisado", 45000, "u", 14000, null], ["Peinado", 15000, "u", 1500, null], ["Tratamiento capilar", 14000, "u", 4000, null],
+      ["Shampoo 500 ml", 9500, "u", 6200, 8], ["Acondicionador 500 ml", 9500, "u", 6200, 2], ["Cera para peinar", 6000, "u", 3600, 10]]],
   };
   const PAGOS = ["Efectivo", "Transferencia", "QR", "Posnet"];
 
@@ -48,7 +53,7 @@
   let semilla = 7; const azar = () => (semilla = (semilla * 16807) % 2147483647) / 2147483647;
 
   const b = id();
-  db.businesses.push({ id: b, name: nombre, ticket_footer: "¡Gracias por su compra!", plan: "free", trial_ends_at: dia(-7).toISOString(), created_at: dia(60).toISOString(), created_by: user.id, fiado: true });
+  db.businesses.push({ id: b, name: nombre, ticket_footer: "¡Gracias por su compra!", plan: "free", trial_ends_at: dia(-7).toISOString(), created_at: dia(60).toISOString(), created_by: user.id, fiado: rubro !== "peluqueria", turnos: rubro === "peluqueria" });
   db.members.push({ business_id: b, user_id: user.id, role: "owner", display_name: "Demo", created_at: dia(60).toISOString() });
   const local = id();
   db.shops.push({ id: local, business_id: b, name: "Local", kind: "retail", position: 1, active: true });
@@ -81,9 +86,9 @@
   }
   db.openings.push({ business_id: b, shop_id: local, day: iso(dia(0)), amount: 20000, updated_at: new Date().toISOString() });
   // Fiado: tres clientes del barrio con su cuenta.
-  [["Rosa (vecina)", [[9, 6400], [5, 3800], [2, 5200]], [[4, 6400, "Efectivo"]]],
+  (rubro === "peluqueria" ? [] : [["Rosa (vecina)", [[9, 6400], [5, 3800], [2, 5200]], [[4, 6400, "Efectivo"]]],
    ["Don Julio", [[12, 12500], [6, 8300]], [[3, 10000, "Transferencia"]]],
-   ["Marta", [[1, 4600]], []]].forEach(([nom, ventasF, pagosF]) => {
+   ["Marta", [[1, 4600]], []]]).forEach(([nom, ventasF, pagosF]) => {
     const c = { id: id(), business_id: b, name: nom }; db.clients.push(c);
     ventasF.forEach(([d, amount]) => {
       const f = dia(d); f.setHours(18, 30, 0, 0); if (d === 0 && f > new Date()) f.setTime(Date.now() - 30 * 60e3);
@@ -93,6 +98,19 @@
     });
     pagosF.forEach(([d, amount, payment]) => { const f = dia(d); f.setHours(11, 0, 0, 0); db.fiados.push({ id: id(), business_id: b, client_id: c.id, sale_id: null, kind: "pago", amount, payment, shop_id: local, day: iso(f), created_at: f.toISOString(), created_by: user.id }) });
   });
+  // Peluquería: dos peluqueros y la agenda de hoy y mañana.
+  if (rubro === "peluqueria") {
+    ["Caro", "Nico"].forEach((n, i) => db.members.push({ business_id: b, user_id: "u-demo-" + i, role: "cashier", display_name: n, created_at: dia(50).toISOString() }));
+    const precio = n => prods.find(p => p.name === n).price;
+    [[0, "09:00", 45, "Lucía Fernández", "Corte de dama", "Caro", "atendido"], [0, "09:30", 30, "Martín Gómez", "Corte de caballero", "Nico", "atendido"],
+     [0, "10:00", 30, "Diego Ruiz", "Barba", "Nico", "no_vino"], [0, "11:00", 120, "Sofía Pérez", "Color", "Caro", "pendiente", "Mismo tono que la última vez"],
+     [0, "11:30", 30, "Juan Torres", "Corte de caballero", "Nico", "pendiente"], [0, "15:00", 150, "Valentina López", "Mechas", "Caro", "pendiente"],
+     [0, "16:00", 45, "Tomás Díaz", "Corte de caballero", "Nico", "pendiente"], [0, "18:00", 60, "Camila Sosa", "Peinado", "Caro", "pendiente", "Cumpleaños de 15"],
+     [-1, "10:00", 45, "Ana Martínez", "Corte de dama", "Caro", "pendiente"], [-1, "10:30", 30, "Lucas Romero", "Barba", "Nico", "pendiente"],
+     [-1, "14:00", 180, "Florencia Ríos", "Alisado", "Caro", "pendiente"]].forEach(([d, hora, minutos, cliente, servicio, atiende, estado, nota]) =>
+      db.turnos.push({ id: id(), business_id: b, day: iso(dia(d)), hora, minutos, cliente, telefono: "3329 4" + String(10000 + Math.floor(azar() * 89999)), servicio, precio: precio(servicio), atiende, nota: nota || "", estado, sale_id: null, created_at: dia(2).toISOString(), created_by: user.id }));
+    window.__DEMO_TAB__ = "turnos";
+  }
   db.expenses.push({ id: id(), business_id: b, shop_id: local, kind: "withdrawal", day: iso(dia(0)), amount: 15000, name: "", payment: "Efectivo", created_at: new Date().toISOString() });
 
   // Sin cuenta no hay plan, ni panel, ni salir: en su lugar, un aviso para pedir la prueba.

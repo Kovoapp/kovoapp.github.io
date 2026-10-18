@@ -214,3 +214,26 @@ textarea:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px var(--ac
 .demo-aviso{background:var(--ac);color:var(--ac-ink);font-size:14px;line-height:1.4;padding:10px 16px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;justify-content:center;text-align:center}
 .demo-aviso a{color:var(--ac-ink);font-weight:700}
 .demo #planCard,.demo #trialBanner{display:none!important}
+/* Turnos */
+.t-nav{margin-top:8px}
+.t-nav .chip{flex:1 1 0}
+.t-res{margin:12px 0 4px}
+.t-res.err{color:var(--rd)}
+.t-lista{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.turno{position:relative;text-align:left;display:grid;grid-template-columns:58px 1fr;gap:4px 10px;padding:12px;border:1px solid var(--bd);border-radius:14px;background:var(--bg)}
+.turno .t-h{font-weight:700;font-size:18px;font-variant-numeric:tabular-nums;line-height:1.2}
+.turno .t-h small{display:block;font-size:12px;font-weight:500;color:var(--mu)}
+.turno .t-i{padding-right:72px;min-width:0}
+.turno .t-c{font-weight:700;font-size:16px;text-align:left}
+.turno .t-d{font-size:14px;color:var(--mu);margin-top:2px}
+.turno .t-x{position:absolute;top:6px;right:6px;display:flex}
+.turno .t-x .x{width:36px;height:36px}
+.turno .t-a{grid-column:1/-1;display:flex;gap:6px;margin-top:6px}
+.turno .t-a .chip{flex:1 1 0;min-width:0;min-height:40px;padding:6px 4px;font-size:14px;white-space:nowrap}
+.turno.atendido{opacity:.75}
+.turno.no_vino .t-c{text-decoration:line-through;color:var(--mu)}
+.pill.no{background:var(--rd2);color:var(--rd)}
+.t-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.note.turno-cobro{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--ac2);color:var(--tx);margin:0 0 12px}
+.note.turno-cobro[hidden]{display:none}
+.note.turno-cobro .linkbtn{padding:0}

@@ -32,14 +32,14 @@ const PAGINAS = [
 <p>Al crear una cuenta aceptás estos términos. Si no estás de acuerdo, no uses el servicio.</p>
 
 <h2>2. Qué es Kovo</h2>
-<p>Kovo sirve para anotar ventas, la caja diaria, pagos a proveedores, el fiado, productos, stock y el balance del mes, desde el navegador del celular o la computadora. No hace falta instalar nada.</p>
+<p>Kovo sirve para anotar ventas, la caja diaria, pagos a proveedores, el fiado, los turnos, productos, stock y el balance del mes, desde el navegador del celular o la computadora. No hace falta instalar nada.</p>
 <p>Kovo <b>no emite factura electrónica</b> ni reemplaza las obligaciones fiscales de tu negocio ante ARCA u otros organismos. Los tickets que imprime son comprobantes no fiscales.</p>
 
 <h2>3. Tu cuenta</h2>
 <ul>
 <li>Para usar Kovo necesitás un email y una contraseña. Sos responsable de cuidar tu contraseña y de lo que se haga con tu cuenta.</li>
 <li>El dueño del negocio puede invitar a cajeros y administradores. El dueño es responsable de a quién le da acceso y de lo que hagan dentro de su negocio.</li>
-<li>Los datos que cargás (productos, precios, ventas, clientes del fiado, proveedores) son tuyos. Vos sos responsable de que sean correctos y de tener derecho a cargarlos.</li>
+<li>Los datos que cargás (productos, precios, ventas, clientes del fiado y de los turnos, proveedores) son tuyos. Vos sos responsable de que sean correctos y de tener derecho a cargarlos.</li>
 </ul>
 
 <h2>4. Prueba gratis, precio y cobro</h2>
@@ -88,6 +88,7 @@ const PAGINAS = [
 <li><b>De tu cuenta:</b> email, contraseña (guardada cifrada, nadie la puede leer) y el nombre que pongas.</li>
 <li><b>De tu negocio:</b> nombre, locales, medios de pago, productos, precios, costos, stock, ventas, caja, pagos a proveedores y el texto del ticket.</li>
 <li><b>Del fiado:</b> el nombre o apodo de los clientes a los que les fiás y lo que te deben. Estos datos los carga el comercio, que es el responsable de ellos; Kovo solo los guarda para que el comercio los use.</li>
+<li><b>De los turnos:</b> el nombre de cada cliente, el teléfono si el comercio lo carga para mandarle el recordatorio por WhatsApp, el servicio y la nota del turno. También los carga el comercio, que es el responsable de ellos; Kovo no les escribe a esos clientes ni usa sus datos para nada más.</li>
 <li><b>Del pago:</b> el estado de la suscripción y los avisos que manda Mercado Pago (número de operación, monto y fecha). No vemos ni guardamos datos de tarjetas.</li>
 <li><b>En tu celular o compu:</b> la app guarda algunos datos en el navegador para funcionar sin internet y recordar tu sesión.</li>
 </ul>

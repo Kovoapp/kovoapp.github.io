@@ -50,3 +50,5 @@ jobs:
         run: node tests/sin-internet.mjs
       - name: Probar el fiado
         run: node tests/fiado.mjs
+      - name: Probar los turnos
+        run: node tests/turnos.mjs

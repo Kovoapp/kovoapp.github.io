@@ -2,7 +2,7 @@
 // No aplica permisos: eso se prueba aparte en supabase/tests.
 window.crearMemoria = (opciones = {}) => {
   const uuid = () => crypto.randomUUID();
-  const db = { businesses: [], members: [], shops: [], payment_methods: [], clients: [], providers: [], products: [], sales: [], expenses: [], openings: [], invites: [], product_costs: [], sale_costs: [], fiados: [], suggestions: [], platform_admins: [], platform_settings: [{ id: 1, founder_price: 15000, regular_price: 18000, founder_slots: 10 }], fn_calls: [],
+  const db = { businesses: [], members: [], shops: [], payment_methods: [], clients: [], providers: [], products: [], sales: [], expenses: [], openings: [], invites: [], product_costs: [], sale_costs: [], fiados: [], turnos: [], suggestions: [], platform_admins: [], platform_settings: [{ id: 1, founder_price: 15000, regular_price: 18000, founder_slots: 10 }], fn_calls: [],
     signup_codes: [{ code: "PRUEBA01", note: "", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 30 * 864e5).toISOString(), used_by: null }] };
   let session = opciones.session || null; const listeners = [];
   const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") };
@@ -15,6 +15,7 @@ window.crearMemoria = (opciones = {}) => {
     expenses: () => ({ id: uuid(), day: today(), created_at: new Date().toISOString(), name: "", payment: "" }),
     openings: () => ({}), product_costs: () => ({}), sale_costs: () => ({}),
     fiados: () => ({ id: uuid(), kind: "pago", day: today(), created_at: new Date().toISOString(), created_by: session && session.user.id }),
+    turnos: () => ({ id: uuid(), minutos: 30, telefono: "", servicio: "", precio: null, atiende: "", nota: "", estado: "pendiente", sale_id: null, created_at: new Date().toISOString(), created_by: session && session.user.id }),
     suggestions: () => ({ id: uuid(), created_at: new Date().toISOString(), done: false, user_id: session && session.user.id }), members: () => ({ created_at: new Date().toISOString(), display_name: "" }),
     signup_codes: () => ({ code: Math.random().toString(16).slice(2, 10).toUpperCase(), note: "", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 30 * 864e5).toISOString(), used_by: null }),
     invites: () => ({ code: Math.random().toString(16).slice(2, 10).toUpperCase(), role: "cashier", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 7 * 864e5).toISOString(), used_by: null })
@@ -57,7 +58,7 @@ window.crearMemoria = (opciones = {}) => {
       else if (this.op === "update") { out = T.filter(m); out.forEach(r => Object.assign(r, this.payload)) }
       else if (this.op === "upsert") { const o = this.payload, ex = T.find(r => this.conf.every(c => r[c] === o[c])); if (ex) Object.assign(ex, o); else T.push({ ...defaults[this.t](), ...o }); out = [ex || T[T.length - 1]] }
       else if (this.op === "delete") { out = T.filter(m); db[this.t] = T.filter(r => !m(r));
-        if (this.t === "sales") db.fiados = db.fiados.filter(f => !out.some(s => s.id === f.sale_id)); return { data: null, error: null, count: out.length } }
+        if (this.t === "sales") { db.fiados = db.fiados.filter(f => !out.some(s => s.id === f.sale_id)); db.turnos.forEach(t => { if (out.some(s => s.id === t.sale_id)) t.sale_id = null }) } return { data: null, error: null, count: out.length } }
       else { out = T.filter(m).map(r => ({ ...r })); if (this.ord) { const [c, asc] = this.ord; out.sort((a, b) => (a[c] > b[c] ? 1 : a[c] < b[c] ? -1 : 0) * (asc ? 1 : -1)) } if (this.lim) out = out.slice(0, this.lim) }
       out = JSON.parse(JSON.stringify(out));
       return { data: this.one ? out[0] || null : out, error: null };
