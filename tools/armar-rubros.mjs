@@ -103,6 +103,25 @@ const RUBROS = [
       ["¿Puedo subir todos los precios juntos?", "Sí. Elegís el porcentaje, cómo redondear y si también sube el costo, y se aplica a todos los cortes o solo a los que filtraste."],
     ],
   },
+  {
+    slug: "peluqueria", nombre: "Peluquería", para: "peluquerías", un: "una peluquería",
+    titulo: "Agenda de turnos y caja para peluquerías desde el celular",
+    desc: "Kovo es la agenda de turnos y la caja de tu peluquería en el celular: anotás los turnos, mandás el recordatorio por WhatsApp y cobrás el servicio en un toque. Probá 7 días gratis.",
+    h1: "La agenda y la caja de tu peluquería, en el celular.",
+    sub: "Anotás cada turno con su servicio y quién lo atiende, le mandás el recordatorio por WhatsApp y lo cobrás en un toque.",
+    alt: "Agenda de turnos en Kovo de una peluquería: cortes, color y mechas del día con quién atiende cada uno",
+    dolores: [
+      ["Turnos anotados en un cuaderno", "Ves la agenda del día con la hora, el cliente, el servicio y quién lo atiende. Si un turno se pisa con otro de la misma persona, Kovo te avisa antes de guardarlo."],
+      ["Clientes que se olvidan del turno", "Con un toque le mandás el recordatorio por WhatsApp, ya escrito con el día y la hora. Si no vino, lo marcás y no cuenta en el día."],
+      ["Cobrar sin hacer cuentas", "Tocás Cobrar en el turno y el servicio pasa a la caja con su precio. Cobrás en efectivo, transferencia o QR, y el turno queda atendido."],
+      ["Varios peluqueros en el mismo local", "Cada uno entra con su cuenta y ve la agenda de todos. El dueño ve el resumen del día y cuánto se ganó en el mes."],
+    ],
+    faq: [
+      ["¿Los clientes pueden sacar turno solos?", "Por ahora no: los turnos los anotás vos o tu equipo. Si te llega un pedido por WhatsApp o por teléfono, lo cargás en segundos."],
+      ["¿Puedo vender productos además de los servicios?", "Sí. Cargás los servicios y los productos (shampoo, cera, tratamientos) con su precio, y llevás el stock de lo que vendés."],
+      ["¿Cómo se activan los turnos?", "En Ajustes, tildás Usar turnos en este negocio. Aparece la pestaña Turnos para vos y para tu equipo."],
+    ],
+  },
 ];
 
 const GENERAL = [

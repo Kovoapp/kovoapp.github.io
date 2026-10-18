@@ -1,5 +1,5 @@
 // Capturas de la página principal y de las páginas por rubro (sitio/img/), sacadas de la demo.
-// Uso: PLAYWRIGHT_MODULE=... node tools/capturas-portada.mjs
+// Uso: PLAYWRIGHT_MODULE=... node tools/capturas-portada.mjs [rubro]   (con un rubro, saca solo esa captura)
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, dirname } from "node:path";
@@ -8,6 +8,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 
+const solo = process.argv[2];
 const root = join(dirname(fileURLToPath(import.meta.url)), ".."), out = join(root, "sitio/img");
 const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".webmanifest": "application/manifest+json" };
 const server = createServer(async (req, res) => {
@@ -30,6 +31,7 @@ const foto = async (nombre, y = 0) => {
 };
 const tab = t => page.evaluate(t => document.querySelector(`.tab[data-t="${t}"]`).click(), t);
 
+if (!solo) {
 // Vender: el carrito arriba, y el cobro con el vuelto más abajo.
 for (const [q, n] of [["Yerba", 1], ["Queso", 350], ["Leche", 2]]) {
   await page.fill("#busq", q); await page.click("#res .chip");
@@ -51,23 +53,28 @@ await foto("balance");
 await tab("resumen");
 await foto("demo", await page.evaluate(() => document.getElementById("cierreTop").closest(".card").getBoundingClientRect().top + scrollY - 16));
 
-// Una captura de Vender por rubro, con una venta típica en el carrito.
+}
+
+// Una captura de Vender por rubro, con una venta típica en el carrito. La peluquería muestra la agenda del día.
 const RUBROS = {
   almacen: [["Yerba", 1], ["Queso", 350], ["Leche", 2]],
   kiosco: [["Alfajor", 2], ["Gaseosa", 1], ["Chicles", 1]],
   dietetica: [["Almendras", 250], ["Avena", 500], ["Pasas", 200]],
   verduleria: [["Papa", 2000], ["Tomate", 1000], ["Lechuga", 1]],
   carniceria: [["Asado", 1500], ["Vacío", 1200], ["Milanesa", 800]],
+  peluqueria: [],
 };
 for (const [slug, items] of Object.entries(RUBROS)) {
+  if (solo && slug !== solo) continue;
   await page.goto(base + "?demo=" + slug);
   await page.waitForSelector("#screen-app:not([hidden])");
+  if (slug === "peluqueria") await page.waitForSelector("#tLista .turno");
   await page.addStyleTag({ content: ".demo-aviso,.toast,#stockAviso,#vfwrap{display:none!important} :focus{outline:none!important}" });
   for (const [q, n] of items) {
     await page.fill("#busq", q); await page.click("#res .chip");
     const inp = page.locator("#cart .cq").last(); await inp.fill(String(n)); await inp.dispatchEvent("input");
   }
-  await page.fill("#busq", "");
+  if (items.length) await page.fill("#busq", "");
   await foto("rubro-" + slug);
 }
 await browser.close(); server.close();

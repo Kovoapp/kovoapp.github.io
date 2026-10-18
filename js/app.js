@@ -41,6 +41,7 @@ function errMsg(e) {
   if (/already_owner/.test(m)) return "Tu cuenta ya tiene un negocio. Para crear otro, escribinos y te pasamos un código.";
   if (/fiado_sin_cliente/.test(m)) return "Para fiar, escribí el nombre del cliente.";
   if (/foreign key|23503/i.test(m)) return "No se puede quitar: tiene fiado anotado. Primero tiene que quedar en cero.";
+  if (/turnos/.test(m) && /column|schema cache|PGRST20[45]|does not exist|relation/i.test(m)) return "Falta actualizar la base de datos para usar los turnos (supabase/turnos.sql).";
   if (/fiado/.test(m) && /column|schema cache|PGRST204|does not exist/i.test(m)) return "Falta actualizar la base de datos para usar el fiado (supabase/fiado.sql).";
   if (/invalid_invite/.test(m)) return "Ese código no existe, ya se usó o venció. Pedí uno nuevo.";
   if (/duplicate key|unique/i.test(m)) return "Ya existe uno con ese nombre o código.";
@@ -425,13 +426,17 @@ function startApp() {
   $("hoyTxt").textContent = t.charAt(0).toUpperCase() + t.slice(1);
   const me = members.find(m => m.user_id === user.id);
   $("whoami").textContent = (me && me.display_name ? me.display_name + " · " : "") + user.email + " · " + ({ owner: "Dueño", admin: "Administrador", cashier: "Cajero" })[role];
-  $("tabs").hidden = !isMgr();
   $$(".mgr").forEach(e => e.hidden = !isMgr());
+  // Los cajeros solo ven pestañas si el negocio usa turnos (Vender y Turnos).
+  $("tabTurnos").hidden = !biz.turnos;
+  $("tabs").hidden = !isMgr() && !biz.turnos;
+  if (tab === "turnos" && !biz.turnos) goTab("venta");
+  else if (tab === "turnos") cargarTurnos();
   $$(".owner-only").forEach(e => e.hidden = role !== "owner");
   pintaPlan(); pintaVista(); cargarAlertas(); subirPendientes();
   if (!activeShops().find(s => s.id === local)) local = (activeShops()[0] || {}).id;
   renderLocales(); renderPagos(); renderCart(); renderClientes(); renderCatalog(); renderSettings(); pintaUndo(); pintaFiado();
-  if (!started) { started = true; wireOnce() }
+  if (!started) { started = true; wireOnce(); if (window.__DEMO_TAB__ && biz.turnos) goTab(window.__DEMO_TAB__) }
 }
 
 // ---------------------------------------------------------------
@@ -543,7 +548,8 @@ async function anotarVenta() {
   say("msg", enCelu ? "✓ Venta guardada en el celular" : fiar ? "✓ Fiado anotado a " + aQuien : "✓ Venta anotada"); moverStock(data.items, -1);
   if (fiar) enCelu ? pintaFiado() : cargarFiado();
   last = data; $("imp").hidden = false;
-  ultima = { id: data.id, amount: monto, shop: shopName(local), payment: pago, at: Date.now(), items: data.items }; store.set("ultimaVenta", JSON.stringify(ultima)); pintaUndo();
+  const turno = turnoCobro ? await turnoCobrado(turnoCobro, enCelu ? null : data.id) : null;
+  ultima = { id: data.id, amount: monto, shop: shopName(local), payment: pago, at: Date.now(), items: data.items, turno }; store.set("ultimaVenta", JSON.stringify(ultima)); pintaUndo();
   mcli = null; $("cbus").value = ""; $("cres").hidden = true; $("mdel").hidden = true; pintaCli();
   cart = []; renderCart(); $("monto").value = ""; $("paga").value = ""; calc();
 }
@@ -557,13 +563,13 @@ async function deshacer() {
   if (!ultima) return;
   if (!await ask("¿Eliminar la última venta: " + fmt(ultima.amount) + " en " + ultima.shop + " (" + ultima.payment + ")?")) return;
   if (pendientes().some(x => x.id === ultima.id)) {
-    guardarPend(pendientes().filter(x => x.id !== ultima.id)); say("msg", "Venta eliminada"); moverStock(ultima.items, 1); pintaFiado();
+    guardarPend(pendientes().filter(x => x.id !== ultima.id)); say("msg", "Venta eliminada"); moverStock(ultima.items, 1); pintaFiado(); turnoSinCobrar(ultima.turno);
     ultima = null; last = null; store.del("ultimaVenta"); pintaUndo(); $("imp").hidden = true; return;
   }
   const { error, count } = await sb.from("sales").delete({ count: "exact" }).eq("id", ultima.id);
   if (error) return aviso(errMsg(error));
   if (count === 0) aviso("No se pudo eliminar: ya pasaron más de 15 minutos. Pedile al dueño que la borre desde Resumen.");
-  else { say("msg", "Venta eliminada"); moverStock(ultima.items, 1); if (ultima.payment === "Fiado") cargarFiado() }
+  else { say("msg", "Venta eliminada"); moverStock(ultima.items, 1); if (ultima.payment === "Fiado") cargarFiado(); turnoSinCobrar(ultima.turno) }
   ultima = null; last = null; store.del("ultimaVenta"); pintaUndo(); $("imp").hidden = true;
 }
 
@@ -578,6 +584,167 @@ function listaBox(box, list, query, onPick) {
 }
 function listaClis(all) { listaBox($("cres"), clientes, all ? "" : $("cbus").value.trim().toLowerCase(), c => { $("cbus").value = c.name; $("cres").hidden = true; syncCli() }) }
 function renderClientes() { syncCli(); if (!$("cres").hidden) listaClis(false) }
+
+// ---------------------------------------------------------------
+// Turnos: la agenda del día (peluquerías, barberías, estética...)
+// ---------------------------------------------------------------
+let turnos = [], tEdit = null, tEstado = "pendiente", turnoCobro = null, tPide = 0, tTimer = null, conocidos = null;
+const ESTADOS = { pendiente: "Pendiente", atendido: "Atendido", no_vino: "No vino" };
+const aMin = h => { const [a, b] = String(h).split(":").map(Number); return a * 60 + b };
+const finTurno = t => { const f = aMin(t.hora) + num(t.minutos); return String(Math.floor(f / 60) % 24).padStart(2, "0") + ":" + String(f % 60).padStart(2, "0") };
+const diaLargo = iso => { const t = new Date(iso + "T12:00:00").toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" }); return t.charAt(0).toUpperCase() + t.slice(1) };
+function sumarDia(iso, n) { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") }
+const diaTurnos = () => isoF("tfecha") || hoy();
+
+async function cargarTurnos() {
+  const dia = diaTurnos(), n = ++tPide;
+  const { data, error } = await sb.from("turnos").select("*").eq("business_id", biz.id).eq("day", dia).order("hora");
+  if (n !== tPide) return; // mientras tanto se pidió otro día
+  if (error) { turnos = []; pintaTurnos(sinRed(error) ? "Sin internet: la agenda se ve cuando vuelva la conexión." : errMsg(error)); return }
+  turnos = data || []; pintaTurnos();
+}
+// Cuando otro celular cambia la agenda.
+function pedirTurnos() { clearTimeout(tTimer); tTimer = setTimeout(cargarTurnos, 300) }
+
+function pintaTurnos(err) {
+  const box = $("tLista"), dia = diaTurnos(); box.innerHTML = "";
+  const vivos = turnos.filter(t => t.estado !== "no_vino"), at = turnos.filter(t => t.estado === "atendido");
+  const prev = vivos.reduce((a, t) => a + num(t.precio), 0);
+  $("tRes").textContent = err || diaLargo(dia) + (dia === hoy() ? " (hoy)" : "") + (turnos.length ? " · " + plural(vivos.length, "turno") + (at.length ? " · " + at.length + (at.length === 1 ? " atendido" : " atendidos") : "") + (prev ? " · previsto " + fmt(prev) : "") : "");
+  $("tRes").classList.toggle("err", !!err);
+  if (!turnos.length && !err) { box.innerHTML = '<div class="mu">No hay turnos para este día.</div>'; return }
+  turnos.forEach(t => {
+    const d = document.createElement("div"); d.className = "turno " + t.estado;
+    const h = document.createElement("div"); h.className = "t-h"; h.textContent = t.hora;
+    const sm = document.createElement("small"); sm.textContent = "a " + finTurno(t); h.appendChild(sm);
+    const info = document.createElement("div"); info.className = "t-i";
+    const c = document.createElement("div"); c.className = "t-c"; c.textContent = t.cliente + " ";
+    if (t.estado !== "pendiente") { const p = document.createElement("span"); p.className = "pill" + (t.estado === "no_vino" ? " no" : ""); p.textContent = t.estado === "atendido" ? "Atendido" : "No vino"; c.appendChild(p) }
+    info.appendChild(c);
+    const det = [t.servicio, t.atiende && "con " + t.atiende, t.precio !== null && t.precio !== undefined && fmt(t.precio)].filter(Boolean).join(" · ");
+    if (det) { const e = document.createElement("div"); e.className = "t-d"; e.textContent = det; info.appendChild(e) }
+    if (t.nota) { const e = document.createElement("div"); e.className = "t-d"; e.textContent = "📝 " + t.nota; info.appendChild(e) }
+    const x = document.createElement("div"); x.className = "t-x";
+    const ed = document.createElement("button"); ed.type = "button"; ed.className = "x"; ed.textContent = "✎"; ed.title = "Editar turno"; ed.setAttribute("aria-label", "Editar turno de " + t.cliente); ed.onclick = () => abrirTurno(t);
+    x.append(ed, delBtn(async () => {
+      if (!await ask("¿Borrar el turno de " + t.cliente + " (" + t.hora + ")?")) return;
+      const { error } = await sb.from("turnos").delete().eq("id", t.id);
+      if (error) return aviso(errMsg(error));
+      toast("Turno borrado"); cargarTurnos();
+    }, "Borrar turno"));
+    d.append(h, info, x);
+    if (t.estado === "pendiente") {
+      const ac = document.createElement("div"); ac.className = "t-a";
+      const btn = (txt, fn, on) => { const b = document.createElement("button"); b.type = "button"; b.className = "chip" + (on ? " on" : " camb"); b.textContent = txt; b.onclick = fn; ac.appendChild(b) };
+      btn("Cobrar", () => cobrarTurno(t), true);
+      const wa = waTurno(t); if (wa) btn("WhatsApp", () => window.open(wa, "_blank", "noopener"));
+      btn("No vino", () => estadoTurno(t, "no_vino"));
+      d.appendChild(ac);
+    }
+    box.appendChild(d);
+  });
+}
+async function estadoTurno(t, estado) {
+  const { error } = await sb.from("turnos").update({ estado }).eq("id", t.id);
+  if (error) return aviso(errMsg(error));
+  cargarTurnos();
+}
+// Link de WhatsApp con el recordatorio escrito. Los números argentinos van con 549 adelante.
+function waTurno(t) {
+  let d = String(t.telefono || "").replace(/\D/g, "");
+  if (d.length < 8) return null;
+  if (d.startsWith("549")) { } else if (d.startsWith("54")) d = "549" + d.slice(2); else d = "549" + d.replace(/^0/, "");
+  const cuando = t.day === hoy() ? "hoy" : t.day === sumarDia(hoy(), 1) ? "mañana" : "el " + diaLargo(t.day).toLowerCase();
+  const txt = `¡Hola ${t.cliente}! Te recuerdo tu turno en ${biz.name} ${cuando} a las ${t.hora}${t.servicio ? " (" + t.servicio + ")" : ""}. Si no podés venir, avisame así le doy el lugar a otra persona. ¡Gracias!`;
+  return "https://wa.me/" + d + "?text=" + encodeURIComponent(txt);
+}
+
+async function abrirTurno(t) {
+  tEdit = t || null; tEstado = t ? t.estado : "pendiente";
+  $("tFormTit").textContent = t ? "Editar turno" : "Nuevo turno";
+  setF("tdia", t ? t.day : diaTurnos());
+  // Un turno nuevo arranca cuando termina el último del día.
+  const ult = turnos.filter(x => x.estado !== "no_vino").slice(-1)[0];
+  $("thora").value = t ? t.hora : ult ? finTurno(ult) : "09:00";
+  $("tdur").value = String(t ? t.minutos : store.get("tDur", "30"));
+  if (!$("tdur").value) $("tdur").value = "30";
+  $("tcli").value = t ? t.cliente : ""; $("ttel").value = t ? t.telefono : ""; $("tserv").value = t ? t.servicio : "";
+  $("tprecio").value = t && t.precio !== null ? num(t.precio) : ""; $("tatiende").value = t ? t.atiende : ""; $("tnota").value = t ? t.nota : "";
+  $("testWrap").hidden = !t;
+  chips($("testado"), Object.keys(ESTADOS), () => tEstado, v => tEstado = v, v => ESTADOS[v]);
+  const opts = (id, l) => { const dl = $(id); dl.innerHTML = ""; [...new Set(l.filter(Boolean))].forEach(v => { const o = document.createElement("option"); o.value = v; dl.appendChild(o) }) };
+  opts("tservList", catalog.filter(p => p.unit !== "kg").map(p => p.name));
+  opts("tatList", members.map(m => m.display_name));
+  $("tMsg").textContent = ""; $("tForm").hidden = false;
+  $("tForm").scrollIntoView({ behavior: "smooth", block: "start" });
+  if (!t) $("tcli").focus();
+  // Clientes que ya vinieron, con su teléfono, para elegirlos de la lista.
+  if (!conocidos) {
+    const { data } = await sb.from("turnos").select("cliente,telefono,created_at").eq("business_id", biz.id).order("created_at", { ascending: false }).limit(500);
+    conocidos = {}; (data || []).forEach(x => { if (!(x.cliente in conocidos) || (!conocidos[x.cliente] && x.telefono)) conocidos[x.cliente] = x.telefono });
+  }
+  opts("tcliList", Object.keys(conocidos));
+}
+async function guardarTurno() {
+  const cliente = $("tcli").value.trim(), day = isoF("tdia"), hora = $("thora").value.slice(0, 5), minutos = parseInt($("tdur").value) || 30;
+  const pr = $("tprecio").value.trim(), precio = pr === "" ? null : parseFloat(pr);
+  if (!cliente) { say("tMsg", "Escribí el nombre del cliente.", true); return $("tcli").focus() }
+  if (!day) return say("tMsg", "Revisá la fecha.", true);
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)) return say("tMsg", "Elegí la hora.", true);
+  if (precio !== null && !(precio >= 0)) return say("tMsg", "El precio tiene que ser un número.", true);
+  const row = { day, hora, minutos, cliente, telefono: $("ttel").value.trim(), servicio: $("tserv").value.trim(), precio, atiende: $("tatiende").value.trim(), nota: $("tnota").value.trim() };
+  if (tEdit) row.estado = tEstado;
+  // Avisa si se pisa con otro turno de la misma persona que atiende.
+  const ese = day === diaTurnos() ? { data: turnos } : await sb.from("turnos").select("*").eq("business_id", biz.id).eq("day", day);
+  const ini = aMin(hora), fin = ini + minutos;
+  const choca = (ese.data || []).find(x => (!tEdit || x.id !== tEdit.id) && x.estado !== "no_vino" && (x.atiende || "") === row.atiende && aMin(x.hora) < fin && ini < aMin(x.hora) + num(x.minutos));
+  if (choca && !await ask(`Se pisa con el turno de ${choca.cliente} (${choca.hora} a ${finTurno(choca)}${choca.atiende ? ", con " + choca.atiende : ""}). ¿Guardarlo igual?`)) return;
+  $("tGuardar").disabled = true;
+  const { error } = tEdit ? await sb.from("turnos").update(row).eq("id", tEdit.id) : await sb.from("turnos").insert({ ...row, business_id: biz.id });
+  $("tGuardar").disabled = false;
+  if (error) return say("tMsg", errMsg(error), true);
+  store.set("tDur", String(minutos));
+  if (conocidos && (!conocidos[cliente] || row.telefono)) conocidos[cliente] = row.telefono;
+  $("tForm").hidden = true; toast(tEdit ? "Turno guardado" : "Turno anotado: " + cliente + ", " + toAR(day).slice(0, 5) + " a las " + hora);
+  tEdit = null; setF("tfecha", day); cargarTurnos(); window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// Cobrar un turno: lleva el servicio a Vender y, al anotar la venta, el turno queda atendido.
+function cobrarTurno(t) {
+  turnoCobro = t; goTab("venta");
+  const p = t.servicio && catalog.find(x => x.unit !== "kg" && x.name.toLowerCase() === t.servicio.toLowerCase());
+  cart = [];
+  if (p && !isWholesale(local) && (t.precio === null || num(t.precio) === num(p.price))) addProd(p);
+  else { renderCart(); $("monto").value = t.precio !== null && t.precio !== undefined ? num(t.precio) : ""; calc() }
+  pintaTurnoCobro();
+  if (!$("monto").value) $("monto").focus();
+}
+function pintaTurnoCobro() {
+  $("tCobro").hidden = !turnoCobro;
+  if (turnoCobro) $("tCobroTxt").textContent = "Cobrando el turno de " + turnoCobro.cliente + " · " + turnoCobro.hora + (turnoCobro.servicio ? " · " + turnoCobro.servicio : "");
+}
+async function turnoCobrado(t, saleId) {
+  turnoCobro = null; pintaTurnoCobro();
+  const { error } = await sb.from("turnos").update({ estado: "atendido", sale_id: saleId }).eq("id", t.id);
+  if (error) { aviso("La venta se anotó, pero el turno de " + t.cliente + " no se pudo marcar como atendido. Hacelo desde Turnos con Editar."); return null }
+  toast("Turno de " + t.cliente + " atendido"); return t.id;
+}
+function turnoSinCobrar(id) {
+  if (id) sb.from("turnos").update({ estado: "pendiente", sale_id: null }).eq("id", id).then(() => { if (tab === "turnos") cargarTurnos() });
+}
+function wireTurnos() {
+  dateField("tfecha", "date", cargarTurnos);
+  dateField("tdia", "date", () => { });
+  $("tPrev").onclick = () => { setF("tfecha", sumarDia(diaTurnos(), -1)); cargarTurnos() };
+  $("tNext").onclick = () => { setF("tfecha", sumarDia(diaTurnos(), 1)); cargarTurnos() };
+  $("tNuevo").onclick = () => abrirTurno(null);
+  $("tCancelar").onclick = () => { $("tForm").hidden = true; tEdit = null };
+  $("tGuardar").onclick = guardarTurno;
+  $("tCobroNo").onclick = () => { turnoCobro = null; cart = []; renderCart(); sync(); pintaTurnoCobro() };
+  // Al elegir un servicio que está en Productos, trae su precio; al elegir un cliente conocido, su teléfono.
+  $("tserv").onchange = () => { const p = catalog.find(x => x.name.toLowerCase() === $("tserv").value.trim().toLowerCase()); if (p && $("tprecio").value === "") $("tprecio").value = num(p.price) };
+  $("tcli").onchange = () => { const tel = conocidos && conocidos[$("tcli").value.trim()]; if (tel && !$("ttel").value) $("ttel").value = tel };
+}
 
 // ---------------------------------------------------------------
 // Fiado: lo que cada cliente se llevó sin pagar y lo que fue pagando
@@ -1050,7 +1217,7 @@ function pintarBal() {
 // ---------------------------------------------------------------
 let punit = "Unidad";
 function renderSettings() {
-  $("cbiz").value = biz.name; $("pie").value = biz.ticket_footer || ""; $("cfiado").checked = !!biz.fiado;
+  $("cbiz").value = biz.name; $("pie").value = biz.ticket_footer || ""; $("cfiado").checked = !!biz.fiado; $("cturnos").checked = !!biz.turnos;
   chips($("anchos"), ["58 mm", "80 mm"], () => anchoTxt, v => { anchoTxt = v; store.set("ancho", v); aplicarAncho() });
   if (!isMgr()) return;
   // Locales
@@ -1301,7 +1468,7 @@ async function leerImport(file) {
   const box = $("pimpRes"); box.textContent = "Leyendo " + file.name + "…"; importar = null;
   let res;
   try {
-    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=27");
+    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=28");
     res = armarProductos(await leerPlanilla(file));
   } catch (e) {
     box.innerHTML = ""; const d = document.createElement("div"); d.className = "imp-err";
@@ -1438,11 +1605,12 @@ function refresh() {
   else if (tab === "prov") cargarProv();
   else if (tab === "apertura") cargarAper();
   else if (tab === "balance") cargarBal();
+  else if (tab === "turnos") cargarTurnos();
 }
 function goTab(t) {
   tab = t;
   $$("#tabs .tab").forEach(x => { const on = x.dataset.t === t; x.classList.toggle("on", on); x.setAttribute("aria-current", on ? "page" : "false") });
-  ["venta", "resumen", "apertura", "prov", "balance"].forEach(s => $(s).hidden = s !== t);
+  ["venta", "turnos", "resumen", "apertura", "prov", "balance"].forEach(s => $(s).hidden = s !== t);
   if (t === "apertura") renderALocales();
   if (t === "prov") renderPTipo();
   refresh(); window.scrollTo({ top: 0 });
@@ -1570,6 +1738,13 @@ function wireOnce() {
     if (error) { $("cfiado").checked = !on; return aviso(errMsg(error)) }
     toast(on ? "Fiado activado: ya aparece como medio de pago" : "Fiado desactivado"); reloadRefs();
   };
+  $("cturnos").onchange = async () => {
+    const on = $("cturnos").checked;
+    const { error } = await sb.from("businesses").update({ turnos: on }).eq("id", biz.id);
+    if (error) { $("cturnos").checked = !on; return aviso(errMsg(error)) }
+    toast(on ? "Turnos activado: ya aparece la pestaña Turnos" : "Turnos desactivado"); reloadRefs();
+  };
+  wireTurnos();
   $("fdOk").onclick = anotarCobro;
   $("fdNo").onclick = () => { $("fdCobro").hidden = true; fdCli = null };
   $("fdMonto").onkeydown = e => { if (e.key === "Enter") anotarCobro() };
@@ -1634,6 +1809,7 @@ function wireOnce() {
     let t = null;
     const bump = () => { clearTimeout(t); t = setTimeout(refresh, 400) };
     channel = sb.channel("caja-" + biz.id);
+    if (biz.turnos) channel.on("postgres_changes", { event: "*", schema: "public", table: "turnos", filter: "business_id=eq." + biz.id }, () => { if (tab === "turnos") pedirTurnos() });
     if (biz.fiado) channel.on("postgres_changes", { event: "*", schema: "public", table: "fiados", filter: "business_id=eq." + biz.id }, () => { bump(); cargarFiado() });
     ["sales", "expenses", "openings"].forEach(tb => channel.on("postgres_changes", { event: "*", schema: "public", table: tb, filter: "business_id=eq." + biz.id }, bump));
     channel.subscribe();
