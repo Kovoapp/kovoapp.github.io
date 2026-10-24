@@ -15,9 +15,11 @@ PSQL=(psql "$PGURL" -v ON_ERROR_STOP=1 -q -t -o /dev/null)
 "${PSQL[@]}" -f ../fiado.sql
 "${PSQL[@]}" -f ../turnos.sql
 "${PSQL[@]}" -f ../notas.sql
+"${PSQL[@]}" -f ../reservas.sql
 "${PSQL[@]}" -f rls_test.sql
 "${PSQL[@]}" -f costos_test.sql
 "${PSQL[@]}" -f pago_mes_test.sql
 "${PSQL[@]}" -f fiado_test.sql
 "${PSQL[@]}" -f turnos_test.sql
 "${PSQL[@]}" -f notas_test.sql
+"${PSQL[@]}" -f reservas_test.sql

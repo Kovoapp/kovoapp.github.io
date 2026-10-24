@@ -112,6 +112,8 @@
      [-1, "10:00", 45, "Ana Martínez", "Corte de dama", "Caro", "pendiente"], [-1, "10:30", 30, "Lucas Romero", "Barba", "Nico", "pendiente"],
      [-1, "14:00", 180, "Florencia Ríos", "Alisado", "Caro", "pendiente"]].forEach(([d, hora, minutos, cliente, servicio, atiende, estado, nota]) =>
       db.turnos.push({ id: id(), business_id: b, day: iso(dia(d)), hora, minutos, cliente, telefono: "3329 4" + String(10000 + Math.floor(azar() * 89999)), servicio, precio: precio(servicio), atiende, nota: nota || "", estado, sale_id: null, created_at: dia(2).toISOString(), created_by: user.id }));
+    Object.assign(db.businesses[0], { reservas: true, reservas_slug: "demo", reservas_horario: { dias: [1, 2, 3, 4, 5, 6], desde: "09:00", hasta: "19:00", minutos: 30, lugares: 2 } });
+    db.turnos[3].origen = "online";
     window.__DEMO_TAB__ = "turnos";
   }
   db.expenses.push({ id: id(), business_id: b, shop_id: local, kind: "withdrawal", day: iso(dia(0)), amount: 15000, name: "", payment: "Efectivo", created_at: new Date().toISOString() });
@@ -121,6 +123,7 @@
   window.__SB__ = sb;
   window.__DEMO__ = true;
   addEventListener("DOMContentLoaded", () => {
+    if (!document.getElementById("screen-app")) return; // la página de turnos online tiene su propio aviso
     document.documentElement.classList.add("demo");
     const a = document.createElement("div"); a.className = "demo-aviso";
     const t = document.createElement("span"); t.textContent = "Estás viendo una demo con datos de ejemplo. Probá vender, mirá el cierre y el balance: nada se guarda.";

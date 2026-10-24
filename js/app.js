@@ -677,6 +677,7 @@ function pintaTurnos(err) {
     const sm = document.createElement("small"); sm.textContent = "a " + finTurno(t); h.appendChild(sm);
     const info = document.createElement("div"); info.className = "t-i";
     const c = document.createElement("div"); c.className = "t-c"; c.textContent = t.cliente + " ";
+    if (t.origen === "online") { const p = document.createElement("span"); p.className = "pill online"; p.textContent = "Online"; c.appendChild(p); c.appendChild(document.createTextNode(" ")) }
     if (t.estado !== "pendiente") { const p = document.createElement("span"); p.className = "pill" + (t.estado === "no_vino" ? " no" : ""); p.textContent = t.estado === "atendido" ? "Atendido" : "No vino"; c.appendChild(p) }
     info.appendChild(c);
     const det = [t.servicio, t.atiende && "con " + t.atiende, t.precio !== null && t.precio !== undefined && fmt(t.precio)].filter(Boolean).join(" · ");
@@ -802,6 +803,56 @@ function wireTurnos() {
   // Al elegir un servicio que está en Productos, trae su precio; al elegir un cliente conocido, su teléfono.
   $("tserv").onchange = () => { const p = catalog.find(x => x.name.toLowerCase() === $("tserv").value.trim().toLowerCase()); if (p && $("tprecio").value === "") $("tprecio").value = num(p.price) };
   $("tcli").onchange = () => { const tel = conocidos && conocidos[$("tcli").value.trim()]; if (tel && !$("ttel").value) $("ttel").value = tel };
+}
+
+// ---------------------------------------------------------------
+// Turnos online: el link para que los clientes saquen turno solos
+// ---------------------------------------------------------------
+const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+let rDias = [];
+const slugDe = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+const linkReservas = slug => new URL("../turno/?n=" + slug, location.href).href;
+function pintaReservas() {
+  $("resWrap").hidden = !biz.turnos;
+  const h = Object.assign({ dias: [1, 2, 3, 4, 5, 6], desde: "09:00", hasta: "19:00", minutos: 30, lugares: 1 }, biz.reservas_horario || {});
+  $("rOn").checked = !!biz.reservas;
+  $("rSlug").value = biz.reservas_slug || slugDe(biz.name);
+  rDias = [...h.dias]; pintaDias();
+  $("rDesde").value = h.desde; $("rHasta").value = h.hasta; $("rMin").value = String(h.minutos); $("rLug").value = h.lugares;
+  const ok = !!(biz.reservas && biz.reservas_slug);
+  $("rLink").hidden = !ok;
+  if (ok) {
+    const url = linkReservas(biz.reservas_slug);
+    $("rUrl").textContent = url.replace(/^https?:\/\//, ""); $("rAbrir").href = url;
+    $("rWa").href = "https://wa.me/?text=" + encodeURIComponent("Sacá tu turno en " + biz.name + " desde acá: " + url);
+  }
+}
+function pintaDias() {
+  const box = $("rSemana"); box.innerHTML = "";
+  DIAS.forEach((d, i) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "chip" + (rDias.includes(i + 1) ? " on" : ""); b.textContent = d; b.setAttribute("aria-pressed", String(rDias.includes(i + 1)));
+    b.onclick = () => { rDias = rDias.includes(i + 1) ? rDias.filter(x => x !== i + 1) : [...rDias, i + 1].sort(); pintaDias() };
+    box.appendChild(b);
+  });
+}
+async function guardarReservas() {
+  const slug = slugDe($("rSlug").value), desde = $("rDesde").value.slice(0, 5), hasta = $("rHasta").value.slice(0, 5);
+  const minutos = parseInt($("rMin").value) || 30, lugares = parseInt($("rLug").value);
+  $("rSlug").value = slug;
+  if (slug.length < 3) return say("rMsg", "El link tiene que tener al menos 3 letras o números.", true);
+  if (!rDias.length) return say("rMsg", "Elegí al menos un día.", true);
+  if (!/^\d{2}:\d{2}$/.test(desde) || !/^\d{2}:\d{2}$/.test(hasta) || aMin(hasta) - aMin(desde) < minutos) return say("rMsg", "Revisá el horario: tiene que entrar al menos un turno entre Desde y Hasta.", true);
+  if (!(lugares >= 1 && lugares <= 10)) return say("rMsg", "Turnos a la vez va de 1 a 10.", true);
+  $("rGuardar").disabled = true;
+  const { error } = await sb.from("businesses").update({ reservas: $("rOn").checked, reservas_slug: slug, reservas_horario: { dias: rDias, desde, hasta, minutos, lugares } }).eq("id", biz.id);
+  $("rGuardar").disabled = false;
+  if (error) return say("rMsg", /reservas_slug|duplicate|unique/i.test(error.message || "") && !/column/i.test(error.message || "") ? "Ese link ya lo usa otro negocio. Probá con otro." : /reservas/.test(error.message || "") ? "Falta actualizar la base de datos para los turnos online (supabase/reservas.sql)." : errMsg(error), true);
+  say("rMsg", $("rOn").checked ? "✓ Guardado: tu link ya funciona" : "✓ Guardado"); reloadRefs();
+}
+function wireReservas() {
+  $("rGuardar").onclick = guardarReservas;
+  $("rSlug").onblur = () => { $("rSlug").value = slugDe($("rSlug").value) };
+  $("rCopiar").onclick = async () => { try { await navigator.clipboard.writeText(linkReservas(biz.reservas_slug)); toast("Link copiado") } catch (e) { aviso(linkReservas(biz.reservas_slug)) } };
 }
 
 // ---------------------------------------------------------------
@@ -1275,7 +1326,7 @@ function pintarBal() {
 // ---------------------------------------------------------------
 let punit = "Unidad";
 function renderSettings() {
-  $("cbiz").value = biz.name; $("pie").value = biz.ticket_footer || ""; $("cfiado").checked = !!biz.fiado; $("cturnos").checked = !!biz.turnos; $("cnotas").checked = !!biz.notas;
+  $("cbiz").value = biz.name; $("pie").value = biz.ticket_footer || ""; $("cfiado").checked = !!biz.fiado; $("cturnos").checked = !!biz.turnos; $("cnotas").checked = !!biz.notas; pintaReservas();
   chips($("anchos"), ["58 mm", "80 mm"], () => anchoTxt, v => { anchoTxt = v; store.set("ancho", v); aplicarAncho() });
   if (!isMgr()) return;
   // Locales
@@ -1526,7 +1577,7 @@ async function leerImport(file) {
   const box = $("pimpRes"); box.textContent = "Leyendo " + file.name + "…"; importar = null;
   let res;
   try {
-    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=29");
+    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=30");
     res = armarProductos(await leerPlanilla(file));
   } catch (e) {
     box.innerHTML = ""; const d = document.createElement("div"); d.className = "imp-err";
@@ -1802,7 +1853,7 @@ function wireOnce() {
     if (error) { $("cturnos").checked = !on; return aviso(errMsg(error)) }
     toast(on ? "Turnos activado: ya aparece la pestaña Turnos" : "Turnos desactivado"); reloadRefs();
   };
-  wireTurnos(); wireNotas();
+  wireTurnos(); wireNotas(); wireReservas();
   $("cnotas").onchange = async () => {
     const on = $("cnotas").checked;
     const { error } = await sb.from("businesses").update({ notas: on }).eq("id", biz.id);

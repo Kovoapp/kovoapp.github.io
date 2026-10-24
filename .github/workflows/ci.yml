@@ -54,3 +54,5 @@ jobs:
         run: node tests/turnos.mjs
       - name: Probar el anotador
         run: node tests/notas.mjs
+      - name: Probar los turnos online
+        run: node tests/reservas.mjs

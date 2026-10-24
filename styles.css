@@ -250,3 +250,10 @@ textarea:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px var(--ac
   .demo .notas-card{top:72px;max-height:calc(100vh - 96px)}
   .en-ajustes .notas-card{display:none}
 }
+/* Turnos online en Ajustes */
+.r-slug .mu{flex:0 0 auto;font-size:14px}
+.r-slug input{flex:1 1 auto;min-width:0}
+.note.r-link{background:var(--ac2);color:var(--tx);overflow-wrap:anywhere}
+.note.r-link .chip{text-decoration:none;display:inline-grid;place-items:center}
+#rSemana .chip{min-width:0;flex:1 1 0;padding:10px 0}
+.pill.online{background:var(--lima);color:#1b1f3b}

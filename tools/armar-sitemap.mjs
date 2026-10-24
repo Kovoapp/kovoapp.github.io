@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const SITIO = join(dirname(fileURLToPath(import.meta.url)), "..", "sitio");
 const URL = "https://appkovo.com/";
 const paginas = (await readdir(SITIO, { recursive: true }))
-  .filter(f => f.endsWith("index.html")).map(f => f.replace(/\\/g, "/").replace(/index\.html$/, ""))
+  .filter(f => f.endsWith("index.html") && !f.startsWith("turno")) // la página de turnos online es por negocio, no va a Google.map(f => f.replace(/\\/g, "/").replace(/index\.html$/, ""))
   .sort((a, b) => a.split("/").length - b.split("/").length || a.localeCompare(b));
 const hoy = new Date().toISOString().slice(0, 10);
 await writeFile(join(SITIO, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
