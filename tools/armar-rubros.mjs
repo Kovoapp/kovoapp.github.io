@@ -112,12 +112,12 @@ const RUBROS = [
     alt: "Agenda de turnos en Kovo de una peluquería: cortes, color y mechas del día con quién atiende cada uno",
     dolores: [
       ["Turnos anotados en un cuaderno", "Ves la agenda del día con la hora, el cliente, el servicio y quién lo atiende. Si un turno se pisa con otro de la misma persona, Kovo te avisa antes de guardarlo."],
+      ["Turnos por WhatsApp a toda hora", "Con los turnos online, tus clientes sacan turno solos desde un link, a cualquier hora: eligen el servicio, el día y un horario libre. No se pisan entre ellos y vos lo ves en la agenda."],
       ["Clientes que se olvidan del turno", "Con un toque le mandás el recordatorio por WhatsApp, ya escrito con el día y la hora. Si no vino, lo marcás y no cuenta en el día."],
       ["Cobrar sin hacer cuentas", "Tocás Cobrar en el turno y el servicio pasa a la caja con su precio. Cobrás en efectivo, transferencia o QR, y el turno queda atendido."],
-      ["Varios peluqueros en el mismo local", "Cada uno entra con su cuenta y ve la agenda de todos. El dueño ve el resumen del día y cuánto se ganó en el mes."],
     ],
     faq: [
-      ["¿Los clientes pueden sacar turno solos?", "Por ahora no: los turnos los anotás vos o tu equipo. Si te llega un pedido por WhatsApp o por teléfono, lo cargás en segundos."],
+      ["¿Los clientes pueden sacar turno solos?", "Sí. Activás los turnos online en Ajustes y Kovo te da un link para poner en tu Instagram o mandar por WhatsApp. El cliente elige el servicio, el día y un horario libre, y el turno aparece en tu agenda. Vos decidís qué días y en qué horario atendés."],
       ["¿Puedo vender productos además de los servicios?", "Sí. Cargás los servicios y los productos (shampoo, cera, tratamientos) con su precio, y llevás el stock de lo que vendés."],
       ["¿Cómo se activan los turnos?", "En Ajustes, tildás Usar turnos en este negocio. Aparece la pestaña Turnos para vos y para tu equipo."],
     ],

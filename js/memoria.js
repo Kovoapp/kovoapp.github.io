@@ -16,7 +16,7 @@ window.crearMemoria = (opciones = {}) => {
     openings: () => ({}), product_costs: () => ({}), sale_costs: () => ({}),
     fiados: () => ({ id: uuid(), kind: "pago", day: today(), created_at: new Date().toISOString(), created_by: session && session.user.id }),
     notas: () => ({ id: uuid(), hecha: false, created_at: new Date().toISOString(), created_by: session && session.user.id }),
-    turnos: () => ({ id: uuid(), minutos: 30, telefono: "", servicio: "", precio: null, atiende: "", nota: "", estado: "pendiente", sale_id: null, created_at: new Date().toISOString(), created_by: session && session.user.id }),
+    turnos: () => ({ id: uuid(), origen: "local", minutos: 30, telefono: "", servicio: "", precio: null, atiende: "", nota: "", estado: "pendiente", sale_id: null, created_at: new Date().toISOString(), created_by: session && session.user.id }),
     suggestions: () => ({ id: uuid(), created_at: new Date().toISOString(), done: false, user_id: session && session.user.id }), members: () => ({ created_at: new Date().toISOString(), display_name: "" }),
     signup_codes: () => ({ code: Math.random().toString(16).slice(2, 10).toUpperCase(), note: "", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 30 * 864e5).toISOString(), used_by: null }),
     invites: () => ({ code: Math.random().toString(16).slice(2, 10).toUpperCase(), role: "cashier", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 7 * 864e5).toISOString(), used_by: null })
@@ -93,6 +93,22 @@ window.crearMemoria = (opciones = {}) => {
         return { data: { nuevos, actualizados }, error: null };
       }
       if (name === "admin_suggestions") return { data: admin ? db.suggestions.map(x => ({ id: x.id, body: x.body, created_at: x.created_at, done: x.done, business: (db.businesses.find(b => b.id === x.business_id) || {}).name, email: String(x.user_id).replace(/^u-/, "") })) : [], error: null };
+      // Turnos online: imitan reservas_info, reservas_ocupado y reservar_turno (supabase/reservas.sql).
+      const resB = sl => db.businesses.find(x => x.reservas && x.turnos && x.reservas_slug === String(sl || "").trim().toLowerCase());
+      const aMin = h => { const [x, y] = h.split(":").map(Number); return x * 60 + y };
+      if (name === "reservas_info") { const b = resB(a.p_slug); return { data: b ? { nombre: b.name, horario: b.reservas_horario, hoy: today(), servicios: db.products.filter(p => p.business_id === b.id && p.unit === "u" && (p.stock ?? null) === null).map(p => ({ nombre: p.name, precio: p.price })).sort((x, y) => x.nombre.localeCompare(y.nombre)) } : null, error: null } }
+      if (name === "reservas_ocupado") { const b = resB(a.p_slug); return { data: b ? db.turnos.filter(t => t.business_id === b.id && t.day === a.p_day && t.estado !== "no_vino").map(t => ({ hora: t.hora, minutos: t.minutos })) : [], error: null } }
+      if (name === "reservar_turno") {
+        const b = resB(a.p_slug); if (!b) return { data: null, error: { message: "reserva_cerrada" } };
+        const h = b.reservas_horario, dur = h.minutos, ini = aMin(a.p_hora), fin = ini + dur;
+        if (!String(a.p_cliente || "").trim()) return { data: null, error: { message: "reserva_sin_nombre" } };
+        if (String(a.p_telefono || "").replace(/\D/g, "").length < 8) return { data: null, error: { message: "reserva_sin_telefono" } };
+        const n = db.turnos.filter(t => t.business_id === b.id && t.day === a.p_day && t.estado !== "no_vino" && aMin(t.hora) < fin && ini < aMin(t.hora) + t.minutos).length;
+        if (n >= (h.lugares || 1)) return { data: null, error: { message: "reserva_ocupado" } };
+        const p = db.products.find(x => x.business_id === b.id && x.name === a.p_servicio);
+        const t = { ...defaults.turnos(), business_id: b.id, day: a.p_day, hora: a.p_hora, minutos: dur, cliente: a.p_cliente.trim(), telefono: a.p_telefono.trim(), servicio: a.p_servicio || "", precio: p ? p.price : null, origen: "online", created_by: b.created_by };
+        db.turnos.push(t); return { data: t.id, error: null };
+      }
       if (name === "is_platform_admin") return { data: admin, error: null };
       if (name === "admin_user_count") return { data: admin ? new Set(db.members.map(m => m.user_id)).size : null, error: null };
       if (name === "admin_overview") return { data: admin ? db.businesses.map(b => ({ business_id: b.id, name: b.name, created_at: b.created_at, plan: b.plan, trial_ends_at: b.trial_ends_at, owner_email: b.created_by.replace(/^u-/, ""), members: db.members.filter(m => m.business_id === b.id).length, sales_30d: db.sales.filter(s => s.business_id === b.id).length, price: b.price || null, paid_until: b.paid_until || null })) : [], error: null };

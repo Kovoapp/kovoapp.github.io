@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sacá tu turno</title>
+<meta name="description" content="Elegí el día y la hora y sacá tu turno.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1b1f3b">
+<link rel="icon" href="../icons/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../app/styles.css?v=30">
+<style>
+  main{padding-bottom:40px}
+  .r-head{padding:18px 2px 6px}
+  .r-head h1{font-family:var(--f-num);font-size:26px;line-height:1.15;margin:0}
+  .r-head p{margin:4px 0 0;color:var(--mu)}
+  .r-dias{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:thin}
+  .r-dias .chip{flex:0 0 auto;min-width:72px;display:flex;flex-direction:column;align-items:center;line-height:1.2;padding:8px 6px}
+  .r-dias .chip small{font-size:12px;opacity:.8}
+  .r-horas{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:8px}
+  .r-horas .chip{min-width:0;font-variant-numeric:tabular-nums}
+  .r-serv .chip small{display:block;font-size:13px;opacity:.8}
+  .r-ok{text-align:center;padding:28px 18px}
+  .r-ok .big{font-size:44px;line-height:1}
+  .r-pie{text-align:center;color:var(--mu);font-size:13px;margin-top:20px}
+  .r-pie a{color:inherit}
+  .demo-aviso{background:var(--ac);color:var(--ac-ink);font-size:14px;padding:10px 16px;text-align:center}
+</style>
+</head>
+<body>
+<div class="demo-aviso" id="rDemo" hidden>Así ven tus clientes el link para sacar turno. Es una demo: no se guarda nada.</div>
+<main>
+  <div class="r-head"><h1 id="rNom">Sacá tu turno</h1><p id="rSub"></p></div>
+  <div class="card" id="rCarga"><div class="mu">Cargando...</div></div>
+  <div class="card" id="rCerrado" hidden><h2 class="card-title">Este link no está disponible</h2><p class="mu">Puede que el negocio haya pausado los turnos online o que el link esté mal escrito. Consultá directamente con el negocio.</p></div>
+  <div id="rForm" hidden>
+    <div class="card r-serv" id="rServCard" hidden>
+      <h2 class="sect">1. ¿Qué te querés hacer?</h2>
+      <div class="row" id="rServ"></div>
+    </div>
+    <div class="card">
+      <h2 class="sect" id="rDiaTit">1. Elegí el día</h2>
+      <div class="r-dias" id="rDias"></div>
+      <h2 class="sect" style="margin-top:14px" id="rHoraTit">Horarios libres</h2>
+      <div class="r-horas" id="rHoras"></div>
+    </div>
+    <div class="card">
+      <h2 class="sect" id="rDatTit">2. Tus datos</h2>
+      <label for="rCli" style="margin-top:0">Nombre y apellido</label>
+      <input id="rCli" maxlength="80" autocomplete="name">
+      <label for="rTel">WhatsApp</label>
+      <input id="rTel" type="tel" inputmode="tel" maxlength="30" autocomplete="tel" placeholder="Ej: 3329 412345">
+      <div class="cobro" style="margin-top:16px"><span class="lbl" id="rResumen">Elegí día y horario</span></div>
+      <button type="button" class="btn" id="rOk">Confirmar turno</button>
+      <div class="ok" id="rMsg"></div>
+    </div>
+  </div>
+  <div class="card r-ok" id="rListo" hidden>
+    <div class="big">✓</div>
+    <h2 class="card-title" style="margin-top:10px" id="rListoTit">¡Listo!</h2>
+    <p id="rListoTxt"></p>
+    <p class="mu">Si no podés ir, avisale al negocio así le da el lugar a otra persona.</p>
+    <button type="button" class="btn sm" id="rOtro">Sacar otro turno</button>
+  </div>
+  <p class="r-pie">Turnos con <a href="../">Kovo</a></p>
+</main>
+<script>
+  if (/[?&]demo(=|&|$)/.test(location.search)) document.write('<script src="../app/js/memoria.js?v=30"><\/script><script src="../app/js/demo.js?v=30"><\/script>');
+</script>
+<script type="module" src="turno.js?v=30"></script>
+</body>
+</html>

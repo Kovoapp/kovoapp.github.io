@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="styles.css?v=29">
+<link rel="stylesheet" href="styles.css?v=30">
 </head>
 <body>
 
@@ -214,6 +214,32 @@
     <label class="row" style="align-items:center;gap:10px;font-weight:500;flex-wrap:nowrap">
       <input id="cturnos" type="checkbox" style="width:22px;min-height:22px;flex:0 0 auto"> Usar turnos en este negocio
     </label>
+    <div id="resWrap" hidden>
+      <h3 class="sect" style="margin-top:20px">Turnos online</h3>
+      <div class="mu">Un link para que tus clientes elijan día y hora libres desde el celular. El turno aparece solo en tu agenda, marcado como online.</div>
+      <label class="row" style="align-items:center;gap:10px;font-weight:500;flex-wrap:nowrap">
+        <input id="rOn" type="checkbox" style="width:22px;min-height:22px;flex:0 0 auto"> Que los clientes saquen turno desde un link
+      </label>
+      <label for="rSlug">Tu link</label>
+      <div class="row r-slug" style="flex-wrap:nowrap;align-items:center"><span class="mu">appkovo.com/turno/?n=</span><input id="rSlug" maxlength="40" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
+      <label>Días que atendés</label>
+      <div class="row" id="rSemana"></div>
+      <div class="t-2">
+        <div><label for="rDesde">Desde</label><input id="rDesde" type="time" step="300"></div>
+        <div><label for="rHasta">Hasta</label><input id="rHasta" type="time" step="300"></div>
+      </div>
+      <div class="t-2">
+        <div><label for="rMin">Cada turno dura</label><select id="rMin"><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">1 hora</option><option value="90">1 h 30</option><option value="120">2 horas</option></select></div>
+        <div><label for="rLug">Turnos a la vez</label><input id="rLug" type="number" inputmode="numeric" min="1" max="10"></div>
+      </div>
+      <div class="mu" style="margin-top:10px">Los clientes eligen entre tus productos que se venden por unidad y no llevan stock (por ejemplo Corte o Color). Cargalos en Productos.</div>
+      <button type="button" class="btn sm" id="rGuardar">Guardar turnos online</button>
+      <div class="ok" id="rMsg"></div>
+      <div class="note r-link" id="rLink" hidden>
+        <div>Tu link: <b id="rUrl"></b></div>
+        <div class="row" style="margin-top:8px"><button type="button" class="chip camb" id="rCopiar">Copiar link</button><a class="chip camb" id="rAbrir" target="_blank" rel="noopener">Abrir</a><a class="chip camb" id="rWa" target="_blank" rel="noopener">Compartir por WhatsApp</a></div>
+      </div>
+    </div>
   </div>
   <div class="card mgr">
     <h2 class="card-title">Equipo</h2>
@@ -532,8 +558,8 @@
 <div id="ticket"></div>
 <script>
   // Demo con datos de ejemplo (app/?demo): carga una base en memoria antes que la app.
-  if (/[?&]demo(=|&|$)/.test(location.search)) document.write('<script src="js/memoria.js?v=29"><\/script><script src="js/demo.js?v=29"><\/script>');
+  if (/[?&]demo(=|&|$)/.test(location.search)) document.write('<script src="js/memoria.js?v=30"><\/script><script src="js/demo.js?v=30"><\/script>');
 </script>
-<script type="module" src="js/app.js?v=29"></script>
+<script type="module" src="js/app.js?v=30"></script>
 </body>
 </html>
