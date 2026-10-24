@@ -41,6 +41,7 @@ function errMsg(e) {
   if (/already_owner/.test(m)) return "Tu cuenta ya tiene un negocio. Para crear otro, escribinos y te pasamos un código.";
   if (/fiado_sin_cliente/.test(m)) return "Para fiar, escribí el nombre del cliente.";
   if (/foreign key|23503/i.test(m)) return "No se puede quitar: tiene fiado anotado. Primero tiene que quedar en cero.";
+  if (/notas/.test(m) && /column|schema cache|PGRST20[45]|does not exist|relation/i.test(m)) return "Falta actualizar la base de datos para usar el anotador (supabase/notas.sql).";
   if (/turnos/.test(m) && /column|schema cache|PGRST20[45]|does not exist|relation/i.test(m)) return "Falta actualizar la base de datos para usar los turnos (supabase/turnos.sql).";
   if (/fiado/.test(m) && /column|schema cache|PGRST204|does not exist/i.test(m)) return "Falta actualizar la base de datos para usar el fiado (supabase/fiado.sql).";
   if (/invalid_invite/.test(m)) return "Ese código no existe, ya se usó o venció. Pedí uno nuevo.";
@@ -120,7 +121,7 @@ function downloadCsv(name, rows) {
 // ---------------------------------------------------------------
 let sb = null, user = null;
 let biz = null, role = null, members = [];
-let shops = [], pays = [], clientes = [], provs = [], catalog = [], costs = {}, fiados = [];
+let shops = [], pays = [], clientes = [], provs = [], catalog = [], costs = {}, fiados = [], notas = [];
 const isMgr = () => role === "owner" || role === "admin";
 const activeShops = () => shops.filter(s => s.active);
 const retailShops = () => activeShops().filter(s => s.kind === "retail");
@@ -364,28 +365,30 @@ async function cancelarSuscripcion() {
 
 async function loadRefs(b) {
   const q = t => sb.from(t).select("*").eq("business_id", b);
-  const [bz, sh, pm, cl, pv, pr, mb, pc, adm, fd] = await Promise.all([
+  const [bz, sh, pm, cl, pv, pr, mb, pc, adm, fd, nt] = await Promise.all([
     sb.from("businesses").select("*").eq("id", b).single(),
     q("shops").order("position"), q("payment_methods").order("position"),
     q("clients").order("name"), isMgr() ? q("providers").order("name") : Promise.resolve({ data: [] }),
     q("products").order("name"), q("members").order("created_at"),
     isMgr() ? q("product_costs") : Promise.resolve({ data: [] }),
     sb.rpc("is_platform_admin"),
-    q("fiados").order("created_at", { ascending: false })
+    q("fiados").order("created_at", { ascending: false }),
+    q("notas").order("created_at")
   ]);
   if (bz.error && sinRed(bz.error) && cajaGuardada(b)) return;
   esAdminApp = !!(adm && adm.data); $("adm").hidden = !esAdminApp;
   biz = bz.data; shops = sh.data || []; pays = pm.data || []; clientes = cl.data || []; provs = pv.data || []; catalog = pr.data || []; members = mb.data || [];
   fiados = (fd && !fd.error && fd.data) || [];
+  notas = (nt && !nt.error && nt.data) || [];
   costs = {}; (pc.data || []).forEach(c => costs[c.product_id] = num(c.cost));
   if (biz) guardarCaja();
 }
 // Lo último que se cargó queda en el celular, para poder abrir la caja y vender sin internet.
-function guardarCaja() { store.set("cajaGuardada", JSON.stringify({ uid: user.id, role: realRole, biz, shops, pays, clientes, provs, catalog, members, costs, fiados })) }
+function guardarCaja() { store.set("cajaGuardada", JSON.stringify({ uid: user.id, role: realRole, biz, shops, pays, clientes, provs, catalog, members, costs, fiados, notas })) }
 function cajaGuardada(b) {
   let c = null; try { c = JSON.parse(store.get("cajaGuardada", "null")) } catch (e) { }
   if (!c || c.uid !== user.id || !c.biz || (b && c.biz.id !== b)) return null;
-  ({ biz, shops, pays, clientes, provs, catalog, members, costs } = c); fiados = c.fiados || [];
+  ({ biz, shops, pays, clientes, provs, catalog, members, costs } = c); fiados = c.fiados || []; notas = c.notas || [];
   return c;
 }
 
@@ -435,7 +438,7 @@ function startApp() {
   $$(".owner-only").forEach(e => e.hidden = role !== "owner");
   pintaPlan(); pintaVista(); cargarAlertas(); subirPendientes();
   if (!activeShops().find(s => s.id === local)) local = (activeShops()[0] || {}).id;
-  renderLocales(); renderPagos(); renderCart(); renderClientes(); renderCatalog(); renderSettings(); pintaUndo(); pintaFiado();
+  renderLocales(); renderPagos(); renderCart(); renderClientes(); renderCatalog(); renderSettings(); pintaUndo(); pintaFiado(); pintaNotas();
   if (!started) { started = true; wireOnce(); if (window.__DEMO_TAB__ && biz.turnos) goTab(window.__DEMO_TAB__) }
 }
 
@@ -584,6 +587,61 @@ function listaBox(box, list, query, onPick) {
 }
 function listaClis(all) { listaBox($("cres"), clientes, all ? "" : $("cbus").value.trim().toLowerCase(), c => { $("cbus").value = c.name; $("cres").hidden = true; syncCli() }) }
 function renderClientes() { syncCli(); if (!$("cres").hidden) listaClis(false) }
+
+// ---------------------------------------------------------------
+// Anotador: cosas para no olvidarse, al lado de la caja
+// ---------------------------------------------------------------
+async function cargarNotas() {
+  const { data, error } = await sb.from("notas").select("*").eq("business_id", biz.id).order("created_at");
+  if (error) return;
+  notas = data || []; guardarCaja(); pintaNotas();
+}
+function pintaNotas() {
+  $("notasCard").hidden = !(biz && biz.notas);
+  if ($("notasCard").hidden) return;
+  const box = $("nLista"); box.innerHTML = "";
+  const orden = [...notas.filter(n => !n.hecha), ...notas.filter(n => n.hecha)];
+  if (!orden.length) box.innerHTML = '<div class="mu">No hay nada anotado.</div>';
+  orden.forEach(n => {
+    const r = document.createElement("label"); r.className = "n-item" + (n.hecha ? " hecha" : "");
+    const c = document.createElement("input"); c.type = "checkbox"; c.checked = n.hecha; c.setAttribute("aria-label", "Hecho: " + n.texto);
+    c.onchange = async () => {
+      n.hecha = c.checked; pintaNotas();
+      const { error } = await sb.from("notas").update({ hecha: n.hecha }).eq("id", n.id);
+      if (error) { n.hecha = !n.hecha; pintaNotas(); return say("nMsg", errMsg(error), true) }
+      guardarCaja();
+    };
+    const t = document.createElement("span"); t.textContent = n.texto;
+    r.append(c, t, delBtn(async e => {
+      e.preventDefault();
+      const { error } = await sb.from("notas").delete().eq("id", n.id);
+      if (error) return say("nMsg", errMsg(error), true);
+      notas = notas.filter(x => x.id !== n.id); guardarCaja(); pintaNotas();
+    }, "Borrar"));
+    box.appendChild(r);
+  });
+  $("nLimpiar").hidden = !notas.some(n => n.hecha);
+}
+async function anotarNota() {
+  const texto = $("nNueva").value.trim(); if (!texto) return $("nNueva").focus();
+  $("nAdd").disabled = true;
+  const { data, error } = await sb.from("notas").insert({ business_id: biz.id, texto }).select().single();
+  $("nAdd").disabled = false;
+  if (error) return say("nMsg", errMsg(error), true);
+  notas.push(data); $("nNueva").value = ""; guardarCaja(); pintaNotas(); $("nNueva").focus();
+}
+function wireNotas() {
+  $("nAdd").onclick = anotarNota;
+  $("nNueva").onkeydown = e => { if (e.key === "Enter") anotarNota() };
+  $("nLimpiar").onclick = async () => {
+    const ids = notas.filter(n => n.hecha).map(n => n.id);
+    if (!await ask("¿Borrar " + plural(ids.length, "cosa") + " hecha" + (ids.length === 1 ? "" : "s") + "?")) return;
+    for (const id of ids) { const { error } = await sb.from("notas").delete().eq("id", id); if (error) { say("nMsg", errMsg(error), true); break } }
+    cargarNotas();
+  };
+  // Lo que anota otro celular aparece al volver a la app.
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && biz && biz.notas && navigator.onLine) cargarNotas() });
+}
 
 // ---------------------------------------------------------------
 // Turnos: la agenda del día (peluquerías, barberías, estética...)
@@ -1217,7 +1275,7 @@ function pintarBal() {
 // ---------------------------------------------------------------
 let punit = "Unidad";
 function renderSettings() {
-  $("cbiz").value = biz.name; $("pie").value = biz.ticket_footer || ""; $("cfiado").checked = !!biz.fiado; $("cturnos").checked = !!biz.turnos;
+  $("cbiz").value = biz.name; $("pie").value = biz.ticket_footer || ""; $("cfiado").checked = !!biz.fiado; $("cturnos").checked = !!biz.turnos; $("cnotas").checked = !!biz.notas;
   chips($("anchos"), ["58 mm", "80 mm"], () => anchoTxt, v => { anchoTxt = v; store.set("ancho", v); aplicarAncho() });
   if (!isMgr()) return;
   // Locales
@@ -1468,7 +1526,7 @@ async function leerImport(file) {
   const box = $("pimpRes"); box.textContent = "Leyendo " + file.name + "…"; importar = null;
   let res;
   try {
-    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=28");
+    const { leerPlanilla, armarProductos } = await import("./planilla.js?v=29");
     res = armarProductos(await leerPlanilla(file));
   } catch (e) {
     box.innerHTML = ""; const d = document.createElement("div"); d.className = "imp-err";
@@ -1744,7 +1802,13 @@ function wireOnce() {
     if (error) { $("cturnos").checked = !on; return aviso(errMsg(error)) }
     toast(on ? "Turnos activado: ya aparece la pestaña Turnos" : "Turnos desactivado"); reloadRefs();
   };
-  wireTurnos();
+  wireTurnos(); wireNotas();
+  $("cnotas").onchange = async () => {
+    const on = $("cnotas").checked;
+    const { error } = await sb.from("businesses").update({ notas: on }).eq("id", biz.id);
+    if (error) { $("cnotas").checked = !on; return aviso(errMsg(error)) }
+    toast(on ? "Anotador activado: está en Vender" : "Anotador desactivado"); reloadRefs();
+  };
   $("fdOk").onclick = anotarCobro;
   $("fdNo").onclick = () => { $("fdCobro").hidden = true; fdCli = null };
   $("fdMonto").onkeydown = e => { if (e.key === "Enter") anotarCobro() };
@@ -1809,6 +1873,7 @@ function wireOnce() {
     let t = null;
     const bump = () => { clearTimeout(t); t = setTimeout(refresh, 400) };
     channel = sb.channel("caja-" + biz.id);
+    if (biz.notas) channel.on("postgres_changes", { event: "*", schema: "public", table: "notas", filter: "business_id=eq." + biz.id }, () => cargarNotas());
     if (biz.turnos) channel.on("postgres_changes", { event: "*", schema: "public", table: "turnos", filter: "business_id=eq." + biz.id }, () => { if (tab === "turnos") pedirTurnos() });
     if (biz.fiado) channel.on("postgres_changes", { event: "*", schema: "public", table: "fiados", filter: "business_id=eq." + biz.id }, () => { bump(); cargarFiado() });
     ["sales", "expenses", "openings"].forEach(tb => channel.on("postgres_changes", { event: "*", schema: "public", table: tb, filter: "business_id=eq." + biz.id }, bump));

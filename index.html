@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="styles.css?v=28">
+<link rel="stylesheet" href="styles.css?v=29">
 </head>
 <body>
 
@@ -202,6 +202,13 @@
     </label>
   </div>
   <div class="card mgr">
+    <h2 class="card-title">Anotador</h2>
+    <div class="mu">Una lista al lado de la caja para no olvidarte de nada: pedir mercadería, llamar a un proveedor, avisarle algo al que viene a la tarde. La ve todo tu equipo.</div>
+    <label class="row" style="align-items:center;gap:10px;font-weight:500;flex-wrap:nowrap">
+      <input id="cnotas" type="checkbox" style="width:22px;min-height:22px;flex:0 0 auto"> Usar el anotador en este negocio
+    </label>
+  </div>
+  <div class="card mgr">
     <h2 class="card-title">Turnos</h2>
     <div class="mu">Para peluquerías, barberías, estética y cualquier negocio que trabaje con turnos. Suma la pestaña <b>Turnos</b>: la agenda del día, el recordatorio por WhatsApp y el cobro del turno en la caja.</div>
     <label class="row" style="align-items:center;gap:10px;font-weight:500;flex-wrap:nowrap">
@@ -331,6 +338,13 @@
       <button class="btn sm" id="imp" hidden>Imprimir ticket</button>
     </div>
     <button type="button" class="btn sm danger-ghost" id="undo" hidden>Eliminar la última venta</button>
+  </div>
+  <div class="card notas-card" id="notasCard" hidden>
+    <h2 class="sect">Anotador</h2>
+    <div class="row" style="flex-wrap:nowrap"><input id="nNueva" placeholder="Ej: pedir yerba" maxlength="300" autocomplete="off"><button type="button" id="nAdd" class="chip camb">+ Anotar</button></div>
+    <div id="nLista" class="n-lista"></div>
+    <button type="button" class="linkbtn" id="nLimpiar" hidden>Borrar las hechas</button>
+    <div class="ok" id="nMsg"></div>
   </div>
   <div class="card" id="vfwrap">
     <label for="vfecha" style="margin-top:0">Fecha de la venta</label>
@@ -518,8 +532,8 @@
 <div id="ticket"></div>
 <script>
   // Demo con datos de ejemplo (app/?demo): carga una base en memoria antes que la app.
-  if (/[?&]demo(=|&|$)/.test(location.search)) document.write('<script src="js/memoria.js?v=28"><\/script><script src="js/demo.js?v=28"><\/script>');
+  if (/[?&]demo(=|&|$)/.test(location.search)) document.write('<script src="js/memoria.js?v=29"><\/script><script src="js/demo.js?v=29"><\/script>');
 </script>
-<script type="module" src="js/app.js?v=28"></script>
+<script type="module" src="js/app.js?v=29"></script>
 </body>
 </html>
