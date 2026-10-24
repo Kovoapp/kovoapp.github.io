@@ -2,7 +2,7 @@
 // No aplica permisos: eso se prueba aparte en supabase/tests.
 window.crearMemoria = (opciones = {}) => {
   const uuid = () => crypto.randomUUID();
-  const db = { businesses: [], members: [], shops: [], payment_methods: [], clients: [], providers: [], products: [], sales: [], expenses: [], openings: [], invites: [], product_costs: [], sale_costs: [], fiados: [], turnos: [], suggestions: [], platform_admins: [], platform_settings: [{ id: 1, founder_price: 15000, regular_price: 18000, founder_slots: 10 }], fn_calls: [],
+  const db = { businesses: [], members: [], shops: [], payment_methods: [], clients: [], providers: [], products: [], sales: [], expenses: [], openings: [], invites: [], product_costs: [], sale_costs: [], fiados: [], turnos: [], notas: [], suggestions: [], platform_admins: [], platform_settings: [{ id: 1, founder_price: 15000, regular_price: 18000, founder_slots: 10 }], fn_calls: [],
     signup_codes: [{ code: "PRUEBA01", note: "", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 30 * 864e5).toISOString(), used_by: null }] };
   let session = opciones.session || null; const listeners = [];
   const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") };
@@ -15,6 +15,7 @@ window.crearMemoria = (opciones = {}) => {
     expenses: () => ({ id: uuid(), day: today(), created_at: new Date().toISOString(), name: "", payment: "" }),
     openings: () => ({}), product_costs: () => ({}), sale_costs: () => ({}),
     fiados: () => ({ id: uuid(), kind: "pago", day: today(), created_at: new Date().toISOString(), created_by: session && session.user.id }),
+    notas: () => ({ id: uuid(), hecha: false, created_at: new Date().toISOString(), created_by: session && session.user.id }),
     turnos: () => ({ id: uuid(), minutos: 30, telefono: "", servicio: "", precio: null, atiende: "", nota: "", estado: "pendiente", sale_id: null, created_at: new Date().toISOString(), created_by: session && session.user.id }),
     suggestions: () => ({ id: uuid(), created_at: new Date().toISOString(), done: false, user_id: session && session.user.id }), members: () => ({ created_at: new Date().toISOString(), display_name: "" }),
     signup_codes: () => ({ code: Math.random().toString(16).slice(2, 10).toUpperCase(), note: "", created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 30 * 864e5).toISOString(), used_by: null }),

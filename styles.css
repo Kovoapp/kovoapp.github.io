@@ -237,3 +237,16 @@ textarea:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px var(--ac
 .note.turno-cobro{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--ac2);color:var(--tx);margin:0 0 12px}
 .note.turno-cobro[hidden]{display:none}
 .note.turno-cobro .linkbtn{padding:0}
+/* Anotador */
+.n-lista{margin-top:10px}
+.n-item{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--bd)}
+.n-item:last-child{border-bottom:0}
+.n-item input[type=checkbox]{width:22px;min-height:22px;flex:0 0 auto;margin:0;accent-color:var(--ac)}
+.n-item span{flex:1 1 auto;min-width:0;overflow-wrap:anywhere;font-size:15px}
+.n-item.hecha span{text-decoration:line-through;color:var(--mu)}
+/* En pantallas anchas va al costado de la caja */
+@media (min-width:1180px){
+  .notas-card{position:fixed;top:24px;left:calc(50% + 316px);width:min(340px,calc(50vw - 340px));max-height:calc(100vh - 48px);overflow:auto;margin:0;z-index:5}
+  .demo .notas-card{top:72px;max-height:calc(100vh - 96px)}
+  .en-ajustes .notas-card{display:none}
+}

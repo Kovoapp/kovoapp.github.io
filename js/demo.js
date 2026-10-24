@@ -53,7 +53,10 @@
   let semilla = 7; const azar = () => (semilla = (semilla * 16807) % 2147483647) / 2147483647;
 
   const b = id();
-  db.businesses.push({ id: b, name: nombre, ticket_footer: "¡Gracias por su compra!", plan: "free", trial_ends_at: dia(-7).toISOString(), created_at: dia(60).toISOString(), created_by: user.id, fiado: rubro !== "peluqueria", turnos: rubro === "peluqueria" });
+  db.businesses.push({ id: b, name: nombre, ticket_footer: "¡Gracias por su compra!", plan: "free", trial_ends_at: dia(-7).toISOString(), created_at: dia(60).toISOString(), created_by: user.id, fiado: rubro !== "peluqueria", turnos: rubro === "peluqueria", notas: true });
+  // El anotador, con un par de cosas pendientes.
+  [["Pedirle al proveedor para el viernes", false], ["Cambiar el rollo de la impresora", true], ["Avisarle a Juan que el lunes abro a las 10", false]].forEach(([texto, hecha], i) =>
+    db.notas.push({ id: id(), business_id: b, texto, hecha, created_at: new Date(Date.now() - (3 - i) * 36e5).toISOString(), created_by: user.id }));
   db.members.push({ business_id: b, user_id: user.id, role: "owner", display_name: "Demo", created_at: dia(60).toISOString() });
   const local = id();
   db.shops.push({ id: local, business_id: b, name: "Local", kind: "retail", position: 1, active: true });
